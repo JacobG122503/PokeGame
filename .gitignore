@@ -1,0 +1,61 @@
+# Ignore object files and libraries
+*.o
+*.a
+*.lib
+
+# Ignore executables
+*.exe
+*.out
+
+# Ignore generated files
+*.dll
+*.exp
+*.ilk
+*.pdb
+*.pgc
+*.pgd
+*.pgf
+*.suo
+*.manifest
+*.idb
+*.pdb
+
+# Ignore VS Code folder
+.vscode/
+
+# Ignore build output directories
+bin/
+out/
+
+# Ignore CMake files
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+Makefile
+cmake_install.cmake
+
+# Ignore Visual Studio files
+*.sdf
+*.opensdf
+*.suo
+*.vcxproj.user
+*.vcxproj.filters
+*.aps
+*.nupkg
+*.vcproj
+*.sln
+*.suo
+*.user
+*.ncb
+
+# Ignore Code::Blocks files
+*.cbp
+
+# Ignore Xcode files
+*.xcodeproj/
+*.xcworkspace/
+
+# Ignore Eclipse files
+.settings/
+.project
+.cproject
