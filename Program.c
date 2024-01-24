@@ -1,8 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
 
 //Prototypes
 void GenerateMap();
 void PrintMap();
+char* FindTerrain();
 
 //Global variables
 #define ROWS 21
@@ -13,15 +17,13 @@ char* map[ROWS][COLUMNS];
 #define BLACK   "\x1b[30m"
 #define RED     "\x1b[31m"
 #define GREEN   "\x1b[32m"
-#define DARKGRN "\x1b[32;2;0;128;0m"
 #define YELLOW  "\x1b[33m"
-#define BLUE    "\x1b[34m"
+#define PURPLE  "\033[0;34m"
 #define MAGENTA "\x1b[35m"
 #define CYAN    "\x1b[36m"
 #define WHITE   "\x1b[37m"
 #define RESET   "\x1b[0m"
 #define GREY    "\x1b[90m"
-#define BROWN   "\x1b[38;2;139;69;19m"
 
 /*
 Percent signs (%) represent
@@ -32,15 +34,14 @@ Centers and Pokemarts (buildings), respectively. Colons (:) are long grass and p
 char* MTN = GREY "%" RESET;
 char* TREE = GREY "^" RESET;
 char* ROAD = YELLOW "#" RESET;
+char* LNGR = GREEN ":" RESET;
+char* CLRNG = GREEN "." RESET;
+char* WATER = CYAN "~" RESET;
 char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
-char* LNGR = DARKGRN ":" RESET;
-char* CLRNG = GREEN "." RESET;
-char* WATER = BLUE "~" RESET;
-
 
 int main(int argc, char *argv[]) {
-    srand(time());
+    srand(time(NULL));
     GenerateMap();
     PrintMap();
 }
@@ -52,7 +53,6 @@ void GenerateMap() {
             map[i][j] = " ";
         }
     }
-
     //Make border 
     for (int i = 0; i < COLUMNS; i++) {
         map[0][i] = MTN;
@@ -66,10 +66,32 @@ void GenerateMap() {
     }
 
     //Fill in middle
-    int xlength = 5;
-    int ylength = 5;
+    int xLength = 5;
+    int yLength = 5;
     int blankSpace = (COLUMNS - 2) * (ROWS - 2);
 
+    //Keep generating terrain until there is no blank space. 
+    while (blankSpace != 0) {
+        //Scale the length of new terrain
+        int newXLength = xLength * (((double)rand() / RAND_MAX) + 1.0);
+        int newYLength = yLength * (((double)rand() / RAND_MAX) + 1.0);
+        
+        //Find point to place. 
+        int x = rand() % (ROWS - 2) + 1;
+        int y = rand() % (COLUMNS - 2) + 1;
+
+        //Place terrain
+        char* terrain = FindTerrain();
+        for (int i = x; i < x + newXLength; i++) {
+            for (int j = y; j < y + newYLength; j++) {
+                //Check if on border
+                if ((i > 0) && (i < ROWS - 1) && (j > 0) && (j < COLUMNS - 1)) {
+                    if (strcmp(map[i][j], " ") == 0) blankSpace--;
+                    map[i][j] = terrain;
+                }
+            }
+        }
+    }
 }
 
 void PrintMap() {
@@ -79,4 +101,22 @@ void PrintMap() {
         }
         printf("\n");
     }
+}
+
+char* FindTerrain() {
+    int ter = rand() % 5 + 1;
+
+    if (ter == 1) {
+        return MTN;
+    } else if (ter == 2) {
+        return TREE;
+    } else if (ter == 3) {
+        return LNGR;
+    } else if (ter == 4) {
+        return CLRNG;
+    } else if (ter == 5) {
+        return WATER;
+    }
+
+    return NULL;
 }
