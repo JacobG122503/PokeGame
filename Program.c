@@ -92,6 +92,49 @@ void GenerateMap() {
             }
         }
     }
+
+    //Set up roads
+    //West to East
+    int westEnt = rand() % (ROWS - 2) + 1;
+    int eastEnt = rand() % (ROWS - 2) + 1;
+    map[westEnt][0] = ROAD;
+    map[eastEnt][COLUMNS - 1] = ROAD;
+
+    //Pick "intersect" column then make first two paths
+    int interCol = rand() % (COLUMNS - 2) + 1;
+    for (int i = 1; i <= interCol; i++) {
+        map[westEnt][i] = ROAD;
+    }
+    for (int i = COLUMNS - 2; i >= interCol; i--) {
+        map[eastEnt][i] = ROAD;
+    }
+
+    //Complete path
+    while (westEnt - eastEnt != 0) {
+        westEnt += -((westEnt - eastEnt) / abs(westEnt - eastEnt));
+        map[westEnt][interCol] = ROAD;
+    }
+
+    //North to South
+    int northEnt = rand() % (COLUMNS - 2) + 1;
+    int southEnt = rand() % (COLUMNS - 2) + 1;
+    map[0][northEnt] = ROAD;
+    map[ROWS - 1][southEnt] = ROAD;
+
+    //Pick "intersect" row then make first two paths
+    int interRow = rand() % (ROWS - 2) + 1;
+    for (int i = 1; i <= interRow; i++) {
+        map[i][northEnt] = ROAD;
+    }
+    for (int i = ROWS - 2; i >= interRow; i--) {
+        map[i][southEnt] = ROAD;
+    }
+
+    //Complete path
+    while (northEnt - southEnt != 0) {
+        northEnt += -((northEnt - southEnt) / abs(northEnt - southEnt));
+        map[interRow][northEnt] = ROAD;
+    }
 }
 
 void PrintMap() {
@@ -104,17 +147,15 @@ void PrintMap() {
 }
 
 char* FindTerrain() {
-    int ter = rand() % 5 + 1;
+    int ter = rand() % 4 + 1;
 
     if (ter == 1) {
-        return MTN;
-    } else if (ter == 2) {
         return TREE;
-    } else if (ter == 3) {
+    } else if (ter == 2) {
         return LNGR;
-    } else if (ter == 4) {
+    } else if (ter == 3) {
         return CLRNG;
-    } else if (ter == 5) {
+    } else if (ter == 4) {
         return WATER;
     }
 
