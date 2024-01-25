@@ -44,6 +44,8 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     GenerateMap();
     PrintMap();
+
+    return 0;
 }
 
 void GenerateMap() {
@@ -72,7 +74,7 @@ void GenerateMap() {
 
     //Keep generating terrain until there is no blank space. 
     while (blankSpace != 0) {
-        //Scale the length of new terrain
+        //Randomly scale the length of new terrain
         int newXLength = xLength * (((double)rand() / RAND_MAX) + 1.0);
         int newYLength = yLength * (((double)rand() / RAND_MAX) + 1.0);
         
@@ -110,9 +112,10 @@ void GenerateMap() {
     }
 
     //Complete path
-    while (westEnt - eastEnt != 0) {
-        westEnt += -((westEnt - eastEnt) / abs(westEnt - eastEnt));
-        map[westEnt][interCol] = ROAD;
+    int westEntCpy = westEnt;
+    while (westEntCpy - eastEnt != 0) {
+        westEntCpy += -((westEntCpy - eastEnt) / abs(westEntCpy - eastEnt));
+        map[westEntCpy][interCol] = ROAD;
     }
 
     //North to South
@@ -131,9 +134,51 @@ void GenerateMap() {
     }
 
     //Complete path
-    while (northEnt - southEnt != 0) {
-        northEnt += -((northEnt - southEnt) / abs(northEnt - southEnt));
-        map[interRow][northEnt] = ROAD;
+    int northEntCpy = northEnt;
+    while (northEntCpy - southEnt != 0) {
+        northEntCpy += -((northEntCpy - southEnt) / abs(northEntCpy - southEnt));
+        map[interRow][northEntCpy] = ROAD;
+    }
+
+    //Place PokeMart and PokeCenter 
+    int buidlingsPlaced = 0;
+    char* building = CNTR;
+    while (buidlingsPlaced != 2) {
+        int placedCorrectly = 0;
+        int horzOrVert = 1;//rand() % 2 + 1;
+        int aboveOrBelow = 1;//rand() % 2 + 1;
+        int leftOrRight = 1;//rand() % 2 + 1;
+
+        if (horzOrVert == 1) {
+            if (leftOrRight == 1) {
+                while (placedCorrectly == 0) {
+                    //Check if two above is barrier if so, switch to below Road. 
+                    if (aboveOrBelow == 1) {
+                        if (westEnt - 2 <= 1) {
+                            aboveOrBelow = 2;
+                            continue;
+                        }
+                        //Specifically this will be the bottom left of the building 
+                        int spotCol = rand() % (interCol - 3) + 1; 
+                        //Place building 
+                        map[westEnt - 1][spotCol] = building;//Left bottom
+                        map[westEnt - 2][spotCol] = building;//Left top
+                        map[westEnt - 1][spotCol + 1] = building;//Right bottom
+                        map[westEnt - 2][spotCol + 1] = building;//Right top
+                        placedCorrectly = 1;
+                    } else if (aboveOrBelow == 2) {
+
+                    }
+                }
+            } else if (leftOrRight == 2) {
+
+            }
+
+        } else if (horzOrVert == 2) {
+
+        }
+        building = PKMART;
+        buidlingsPlaced++;
     }
 }
 
