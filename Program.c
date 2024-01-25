@@ -1,3 +1,8 @@
+/*
+PROGRAM INFO
+Author: Jacob Garcia
+Version: 1.01
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -144,39 +149,36 @@ void GenerateMap() {
     int buidlingsPlaced = 0;
     char* building = CNTR;
     while (buidlingsPlaced != 2) {
-        int placedCorrectly = 0;
-        int horzOrVert = 1;//rand() % 2 + 1;
-        int aboveOrBelow = 1;//rand() % 2 + 1;
-        int leftOrRight = 1;//rand() % 2 + 1;
+        /*TODO Okay so here is my idea, for like the terrain, randomly choose spots on the map looking for a path
+        This sound incredibly inefficient but just choose randomly until a good spot is found that satisfies all conditions:
+        1. Doesn't go out of bounds
+        2. There is no road in placement. 
+        3. Placed next to road. 
+        4. Not placed on other building 
+        */
+        int spotFound = 0;
+        while (spotFound == 0) {
+            int spotCol = rand() % (COLUMNS - 3) + 1;
+            int spotRow = rand() % (ROWS - 3) + 3;
 
-        if (horzOrVert == 1) {
-            if (leftOrRight == 1) {
-                while (placedCorrectly == 0) {
-                    //Check if two above is barrier if so, switch to below Road. 
-                    if (aboveOrBelow == 1) {
-                        if (westEnt - 2 <= 1) {
-                            aboveOrBelow = 2;
-                            continue;
-                        }
-                        //Specifically this will be the bottom left of the building 
-                        int spotCol = rand() % (interCol - 3) + 1; 
-                        //Place building 
-                        map[westEnt - 1][spotCol] = building;//Left bottom
-                        map[westEnt - 2][spotCol] = building;//Left top
-                        map[westEnt - 1][spotCol + 1] = building;//Right bottom
-                        map[westEnt - 2][spotCol + 1] = building;//Right top
-                        placedCorrectly = 1;
-                    } else if (aboveOrBelow == 2) {
-
-                    }
+            //Check conditions
+            if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
+            if (strcmp(map[spotRow - 1][spotCol], CNTR) == 0 ||
+                strcmp(map[spotRow - 2][spotCol], CNTR) == 0 || 
+                strcmp(map[spotRow - 1][spotCol + 1], CNTR) == 0 ||
+                strcmp(map[spotRow - 2][spotCol + 1], CNTR) == 0) continue;
+            if (strcmp(map[spotRow - 1][spotCol], ROAD) != 0 &&
+                strcmp(map[spotRow - 2][spotCol], ROAD) != 0 && 
+                strcmp(map[spotRow - 1][spotCol + 1], ROAD) != 0 &&
+                strcmp(map[spotRow - 2][spotCol + 1], ROAD) != 0) {
+                    map[spotRow - 1][spotCol] = building;
+                    map[spotRow - 2][spotCol] = building;
+                    map[spotRow - 1][spotCol + 1] = building;
+                    map[spotRow - 2][spotCol + 1] = building;
+                    spotFound = 1;
                 }
-            } else if (leftOrRight == 2) {
-
-            }
-
-        } else if (horzOrVert == 2) {
-
         }
+
         building = PKMART;
         buidlingsPlaced++;
     }
