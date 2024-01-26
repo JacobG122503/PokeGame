@@ -149,36 +149,60 @@ void GenerateMap() {
     int buidlingsPlaced = 0;
     char* building = CNTR;
     while (buidlingsPlaced != 2) {
-        /*TODO Okay so here is my idea, for like the terrain, randomly choose spots on the map looking for a path
-        This sound incredibly inefficient but just choose randomly until a good spot is found that satisfies all conditions:
+        /* Randomly pick spots on map, check 4 conditions, if pass place, else, pick new point. 
         1. Doesn't go out of bounds
         2. There is no road in placement. 
         3. Placed next to road. 
         4. Not placed on other building 
         */
         int spotFound = 0;
+        int topOrBottom = rand() % 2 + 1;
         while (spotFound == 0) {
-            int spotCol = rand() % (COLUMNS - 3) + 1;
-            int spotRow = rand() % (ROWS - 3) + 3;
-
-            //Check conditions
-            if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
-            if (strcmp(map[spotRow - 1][spotCol], CNTR) == 0 ||
-                strcmp(map[spotRow - 2][spotCol], CNTR) == 0 || 
-                strcmp(map[spotRow - 1][spotCol + 1], CNTR) == 0 ||
-                strcmp(map[spotRow - 2][spotCol + 1], CNTR) == 0) continue;
-            if (strcmp(map[spotRow - 1][spotCol], ROAD) != 0 &&
-                strcmp(map[spotRow - 2][spotCol], ROAD) != 0 && 
-                strcmp(map[spotRow - 1][spotCol + 1], ROAD) != 0 &&
-                strcmp(map[spotRow - 2][spotCol + 1], ROAD) != 0) {
-                    map[spotRow - 1][spotCol] = building;
-                    map[spotRow - 2][spotCol] = building;
-                    map[spotRow - 1][spotCol + 1] = building;
-                    map[spotRow - 2][spotCol + 1] = building;
-                    spotFound = 1;
-                }
+            //Top
+            if (topOrBottom == 1) {
+                int spotCol = rand() % (COLUMNS - 3) + 1;
+                int spotRow = rand() % (ROWS - 3) + 3;
+                //Check conditions
+                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol], CNTR) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol], CNTR) == 0 || 
+                    strcmp(map[spotRow - 1][spotCol + 1], CNTR) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol + 1], CNTR) == 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol], ROAD) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol], ROAD) != 0 && 
+                    strcmp(map[spotRow - 1][spotCol + 1], ROAD) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol + 1], ROAD) != 0) {
+                        map[spotRow - 1][spotCol] = building;
+                        map[spotRow - 2][spotCol] = building;
+                        map[spotRow - 1][spotCol + 1] = building;
+                        map[spotRow - 2][spotCol + 1] = building;
+                        spotFound = 1;
+                    }
+            }
+            //Bottom
+            if (topOrBottom == 2) {
+                int spotCol = rand() % (COLUMNS - 3) + 1;
+                int spotRow = rand() % (ROWS - 6) + 3;
+                //Check conditions
+                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol], CNTR) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol], CNTR) == 0 || 
+                    strcmp(map[spotRow + 1][spotCol + 1], CNTR) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol + 1], CNTR) == 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol], ROAD) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol], ROAD) != 0 && 
+                    strcmp(map[spotRow + 1][spotCol + 1], ROAD) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol + 1], ROAD) != 0) {
+                        map[spotRow + 1][spotCol] = building;
+                        map[spotRow + 2][spotCol] = building;
+                        map[spotRow + 1][spotCol + 1] = building;
+                        map[spotRow + 2][spotCol + 1] = building;
+                        spotFound = 1;
+                    }
+            }
         }
 
+        topOrBottom = rand() % 2 + 1;
         building = PKMART;
         buidlingsPlaced++;
     }
