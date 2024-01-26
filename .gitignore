@@ -31,7 +31,6 @@ out/
 CMakeFiles/
 CMakeCache.txt
 CMakeScripts/
-Makefile
 cmake_install.cmake
 
 # Ignore Visual Studio files
@@ -59,3 +58,8 @@ cmake_install.cmake
 .settings/
 .project
 .cproject
+Program
+.DS_Store
+Program.dSYM/Contents/Info.plist
+Program.dSYM/Contents/Resources/Relocations/aarch64/Program.yml
+CHANGELOG
