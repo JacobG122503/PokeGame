@@ -1,32 +1,30 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.01
+Version: 1.02
 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
-//Global variables
+//Constants
 #define ROWS 21
 #define COLUMNS 80
-#define WORLDROWS 21
-#define WORLDCOLUMNS 80
-//char* map[ROWS][COLUMNS];
+#define WORLDROWS 401
+#define WORLDCOLUMNS 401
 
-//Prototypes
-struct map GenerateMap();
-void PrintMap(struct map);
-char* FindTerrain();
-
+//Structs
 struct map {
     char* map[ROWS][COLUMNS];
     int x;
     int y;
 };
 
-struct map WorldMap[WORLDROWS][WORLDCOLUMNS];
+//Prototypes
+struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y);
+void PrintMap(struct map);
+char* FindTerrain();
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -57,13 +55,19 @@ char* PKMART = MAGENTA "M" RESET;
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
-    struct map currentMap = GenerateMap();
-    PrintMap(currentMap);
 
+    //struct map worldMap[401][401];
+
+    struct map* worldMap[WORLDROWS][WORLDCOLUMNS];
+
+    struct map currentMap = GenerateMap(worldMap, 200, 200);
+    PrintMap(*worldMap[200][200]);
+
+    printf("\n");
     return 0;
 }
 
-struct map GenerateMap() {
+struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
     char* map[ROWS][COLUMNS];
 
     //Fill with blank space
@@ -221,6 +225,11 @@ struct map GenerateMap() {
 
     struct map newMap;
     memcpy(newMap.map, map, sizeof(newMap.map));
+    newMap.x = x;
+    newMap.y = y;
+
+    worldMap[x][y] = malloc(sizeof(newMap));
+    worldMap[x][y] = &newMap;
 
     return newMap;
 }
@@ -232,6 +241,7 @@ void PrintMap(struct map currMap) {
         }
         printf("\n");
     }
+    printf("(%d, %d)", currMap.x - 200, currMap.y - 200);
 }
 
 char* FindTerrain() {
