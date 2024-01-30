@@ -8,15 +8,25 @@ Version: 1.01
 #include <time.h>
 #include <string.h>
 
-//Prototypes
-void GenerateMap();
-void PrintMap();
-char* FindTerrain();
-
 //Global variables
 #define ROWS 21
 #define COLUMNS 80
-char* map[ROWS][COLUMNS];
+#define WORLDROWS 21
+#define WORLDCOLUMNS 80
+//char* map[ROWS][COLUMNS];
+
+//Prototypes
+struct map GenerateMap();
+void PrintMap(struct map);
+char* FindTerrain();
+
+struct map {
+    char* map[ROWS][COLUMNS];
+    int x;
+    int y;
+};
+
+struct map WorldMap[WORLDROWS][WORLDCOLUMNS];
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -47,14 +57,16 @@ char* PKMART = MAGENTA "M" RESET;
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
-    GenerateMap();
-    PrintMap();
+    struct map currentMap = GenerateMap();
+    PrintMap(currentMap);
 
     return 0;
 }
 
-void GenerateMap() {
-    //Fill with blank space TEMP
+struct map GenerateMap() {
+    char* map[ROWS][COLUMNS];
+
+    //Fill with blank space
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
             map[i][j] = " ";
@@ -206,12 +218,17 @@ void GenerateMap() {
         building = PKMART;
         buidlingsPlaced++;
     }
+
+    struct map newMap;
+    memcpy(newMap.map, map, sizeof(newMap.map));
+
+    return newMap;
 }
 
-void PrintMap() {
+void PrintMap(struct map currMap) {
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            printf("%s", map[i][j]);
+            printf("%s", currMap.map[i][j]);
         }
         printf("\n");
     }
