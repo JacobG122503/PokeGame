@@ -56,18 +56,56 @@ char* PKMART = MAGENTA "M" RESET;
 int main(int argc, char *argv[]) {
     srand(time(NULL));
 
-    //struct map worldMap[401][401];
-
     struct map* worldMap[WORLDROWS][WORLDCOLUMNS];
 
-    struct map currentMap = GenerateMap(worldMap, 200, 200);
-    PrintMap(*worldMap[200][200]);
+    int x = 200;
+    int y = 200;
+    struct map currentMap = GenerateMap(worldMap, x, y);
+
+    //Start movement 
+    char command = 'c';
+    while (command != 'q') {
+        system("clear");
+        PrintMap(currentMap);
+
+        printf("What would you like to do next? Type i to see available options.\n");
+        scanf("%c", &command);
+        //Instructions
+        if (command == 'i') {
+            system("clear");
+            printf("%sCOMMAND LIST%s\n", GREEN, RESET);
+            printf("n: Move to the map immediately north of the current map and display it.\n"
+                "s: Move to the map immediately south of the current map and display it.\n"
+                "e: Move to the map immediately east of the current map and display it.\n"
+                "w: Move to the map immediately west of the current map and display it.\n"
+                "f x y: x and y are integers; Fly2 to map (x, y) and display it.\n"
+                "q: Quit the game.\n");
+            printf("\nType c to continue: ");
+            while (command != 'c') scanf("%c", &command);
+            continue;
+        }
+        if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
+            if (command == 'n') y++;
+            if (command == 'e') x++;
+            if (command == 's') y--;
+            if (command == 'w') x--;
+
+            currentMap = GenerateMap(worldMap, x, y);
+            continue;
+        }
+    }
 
     printf("\n");
     return 0;
 }
 
 struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
+    //Check if map already exists
+    if (worldMap[x][y] != NULL) {
+        struct map mapToReturn = *worldMap[x][y];
+        return mapToReturn;
+    }
+
     char* map[ROWS][COLUMNS];
 
     //Fill with blank space
@@ -224,11 +262,16 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     }
 
     struct map newMap;
-    memcpy(newMap.map, map, sizeof(newMap.map));
+    //memcpy(newMap.map, map, sizeof(newMap.map));
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLUMNS; j++) {
+            newMap.map[i][j] = map[i][j];
+        }
+    }
     newMap.x = x;
     newMap.y = y;
 
-    worldMap[x][y] = malloc(sizeof(newMap));
+    worldMap[x][y] = malloc(sizeof(struct map));
     worldMap[x][y] = &newMap;
 
     return newMap;
@@ -241,7 +284,7 @@ void PrintMap(struct map currMap) {
         }
         printf("\n");
     }
-    printf("(%d, %d)", currMap.x - 200, currMap.y - 200);
+    printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
 char* FindTerrain() {
