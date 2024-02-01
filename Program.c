@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         PrintMap(currentMap);
 
         printf("What would you like to do next? Type i to see available options.\n");
-        scanf("%c", &command);
+        scanf(" %c", &command);
         //Instructions
         if (command == 'i') {
             system("clear");
@@ -262,7 +262,7 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     }
 
     struct map newMap;
-    //memcpy(newMap.map, map, sizeof(newMap.map));
+
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
             newMap.map[i][j] = map[i][j];
@@ -272,7 +272,9 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     newMap.y = y;
 
     worldMap[x][y] = malloc(sizeof(struct map));
-    worldMap[x][y] = &newMap;
+    if (worldMap[x][y] != NULL) {
+        memcpy(worldMap[x][y], &newMap, sizeof(struct map));
+    }
 
     return newMap;
 }
