@@ -19,6 +19,10 @@ struct map {
     char* map[ROWS][COLUMNS];
     int x;
     int y;
+    int northEnt;
+    int southEnt;
+    int westEnt;
+    int eastEnt;
 };
 
 //Prototypes
@@ -93,6 +97,13 @@ int main(int argc, char *argv[]) {
             currentMap = GenerateMap(worldMap, x, y);
             continue;
         }
+        if (command == 'f') {
+            printf("Fly to (x y): ");
+            scanf("%d %d", &x, &y);
+            x += 200;
+            y += 200;
+            currentMap = GenerateMap(worldMap, x, y);
+        }
     }
 
     printf("\n");
@@ -101,10 +112,7 @@ int main(int argc, char *argv[]) {
 
 struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
     //Check if map already exists
-    if (worldMap[x][y] != NULL) {
-        struct map mapToReturn = *worldMap[x][y];
-        return mapToReturn;
-    }
+    if (worldMap[x][y] != NULL) return *worldMap[x][y];
 
     char* map[ROWS][COLUMNS];
 
@@ -155,9 +163,30 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     }
 
     //Set up roads
-    //West to East
+    //Check if any maps exist around this new map, change gate to match other map. If not generate new ones. 
     int westEnt = rand() % (ROWS - 2) + 1;
     int eastEnt = rand() % (ROWS - 2) + 1;
+    int northEnt = rand() % (COLUMNS - 2) + 1;
+    int southEnt = rand() % (COLUMNS - 2) + 1;
+
+    //Check North
+    if (worldMap[x][y + 1] != NULL) {
+        northEnt = worldMap[x][y + 1]->southEnt;
+    }
+    //Check South
+    if (worldMap[x][y - 1] != NULL) {
+        southEnt = worldMap[x][y - 1]->northEnt;
+    }
+    //Check West
+    if (worldMap[x - 1][y] != NULL) {
+        westEnt = worldMap[x - 1][y]->eastEnt;
+    }
+    //Check East
+    if (worldMap[x + 1][y] != NULL) {
+        eastEnt = worldMap[x + 1][y]->westEnt;
+    }
+
+    //Connect West to East
     map[westEnt][0] = ROAD;
     map[eastEnt][COLUMNS - 1] = ROAD;
 
@@ -177,9 +206,7 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         map[westEntCpy][interCol] = ROAD;
     }
 
-    //North to South
-    int northEnt = rand() % (COLUMNS - 2) + 1;
-    int southEnt = rand() % (COLUMNS - 2) + 1;
+    //Connect North to South
     map[0][northEnt] = ROAD;
     map[ROWS - 1][southEnt] = ROAD;
 
@@ -270,6 +297,10 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     }
     newMap.x = x;
     newMap.y = y;
+    newMap.northEnt = northEnt;
+    newMap.southEnt = southEnt;
+    newMap.westEnt = westEnt;
+    newMap.eastEnt = eastEnt;
 
     worldMap[x][y] = malloc(sizeof(struct map));
     if (worldMap[x][y] != NULL) {
