@@ -60,7 +60,13 @@ char* PKMART = MAGENTA "M" RESET;
 int main(int argc, char *argv[]) {
     srand(time(NULL));
 
-    struct map* worldMap[WORLDROWS][WORLDCOLUMNS];
+    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; //NOTE Maybe for fun add something that prints every single map
+
+    for (int i = 0; i < WORLDROWS; i++) {
+        for (int j = 0; j < WORLDCOLUMNS; j++) {
+            worldMap[i][j] = NULL;
+        }
+    }
 
     int x = 200;
     int y = 200;
@@ -89,19 +95,26 @@ int main(int argc, char *argv[]) {
             continue;
         }
         if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
-            if (command == 'n') y++;
-            if (command == 'e') x++;
-            if (command == 's') y--;
-            if (command == 'w') x--;
+            if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
+            if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
+            if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
+            if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
 
             currentMap = GenerateMap(worldMap, x, y);
             continue;
         }
         if (command == 'f') {
+            int oldX = x;
+            int oldY = y;
             printf("Fly to (x y): ");
             scanf("%d %d", &x, &y);
             x += 200;
             y += 200;
+            if (x > 400 || y > 400 || x < 0 || y < 0) {
+                x = oldX;
+                y = oldY;
+                continue;
+            }
             currentMap = GenerateMap(worldMap, x, y);
         }
     }
@@ -170,19 +183,19 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     int southEnt = rand() % (COLUMNS - 2) + 1;
 
     //Check North
-    if (worldMap[x][y + 1] != NULL) {
+    if (y < 400 && worldMap[x][y + 1] != NULL) {
         northEnt = worldMap[x][y + 1]->southEnt;
     }
     //Check South
-    if (worldMap[x][y - 1] != NULL) {
+    if (y > 0 && worldMap[x][y - 1] != NULL) {
         southEnt = worldMap[x][y - 1]->northEnt;
     }
     //Check West
-    if (worldMap[x - 1][y] != NULL) {
+    if (x > 0 && worldMap[x - 1][y] != NULL) {
         westEnt = worldMap[x - 1][y]->eastEnt;
     }
     //Check East
-    if (worldMap[x + 1][y] != NULL) {
+    if (x < 400 && worldMap[x + 1][y] != NULL) {
         eastEnt = worldMap[x + 1][y]->westEnt;
     }
 
@@ -225,6 +238,12 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         northEntCpy += -((northEntCpy - southEnt) / abs(northEntCpy - southEnt));
         map[interRow][northEntCpy] = ROAD;
     }
+
+    //If gate on border, close it
+    if (x == 400) map[eastEnt][COLUMNS - 1] = MTN;
+    if (x == 0) map[westEnt][0] = MTN;
+    if (y == 400) map[0][northEnt] = MTN;
+    if (y == 0) map[ROWS - 1][southEnt] = MTN;
 
     //Place PokeMart and PokeCenter 
     int buidlingsPlaced = 0;
