@@ -256,9 +256,10 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
     if (!(x == 200 && y == 200)) {
         double equation = abs(x - 200) + abs(y - 200);
         equation *= -45;
-        equation /= 400.00;
+        equation /= 200.00;
         equation += 50;
         //equation /= 100.00;
+        if (equation < 5) equation = 5;
         
         int probBuildings = 0;
         for (int i = 0; i < 2; i++) {
