@@ -106,8 +106,8 @@ int main(int argc, char *argv[]) {
         if (command == 'f') {
             int oldX = x;
             int oldY = y;
-            printf("Fly to (x y): ");
-            scanf("%d %d", &x, &y);
+            //printf("Fly to (x y): ");
+            scanf(" %d %d", &x, &y);
             x += 200;
             y += 200;
             if (x > 400 || y > 400 || x < 0 || y < 0) {
@@ -247,8 +247,28 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
 
     //Place PokeMart and PokeCenter 
     int buidlingsPlaced = 0;
-    char* building = CNTR;
-    while (buidlingsPlaced != 2) {
+    int buildingsToBePlaced = 2;
+    char* building;
+    int randBuilding = rand() % 2 + 1;
+    if (randBuilding == 1) building = CNTR;
+    if (randBuilding == 2) building = PKMART;
+
+    if (!(x == 200 && y == 200)) {
+        double equation = abs(x - 200) + abs(y - 200);
+        equation *= -45;
+        equation /= 400.00;
+        equation += 50;
+        //equation /= 100.00;
+        
+        int probBuildings = 0;
+        for (int i = 0; i < 2; i++) {
+            double prob = ((double)rand() / RAND_MAX) * 100.00;
+            if (prob <= equation) probBuildings++;
+        }
+        buildingsToBePlaced = probBuildings;
+    }
+
+    while (buidlingsPlaced != buildingsToBePlaced) {
         /* Randomly pick spots on map, check 4 conditions, if pass place, else, pick new point. 
         1. Doesn't go out of bounds
         2. There is no road in placement. 
@@ -302,7 +322,11 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
             }
         }
 
-        building = PKMART;
+        if (building == CNTR) {
+            building = PKMART;
+        } else {
+            building = CNTR;
+        } 
         buidlingsPlaced++;
     }
 
