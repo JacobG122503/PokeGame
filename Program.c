@@ -256,8 +256,8 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         4. Not placed on other building 
         */
         int spotFound = 0;
-        int topOrBottom = rand() % 2 + 1;
         while (spotFound == 0) {
+            int topOrBottom = rand() % 2 + 1;
             //Top
             if (topOrBottom == 1) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
@@ -302,7 +302,6 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
             }
         }
 
-        topOrBottom = rand() % 2 + 1;
         building = PKMART;
         buidlingsPlaced++;
     }
