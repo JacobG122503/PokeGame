@@ -1,5 +1,5 @@
 Program: Program.c
-	gcc Program.c -o Program
+	gcc -Wall -Werror -g Program.c -o Program
 
 clean:
 	rm -f Program *~ core 

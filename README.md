@@ -1,5 +1,5 @@
 # PokeGame 327
-## Version 1.01
+## Version 1.02
 ### Creator: Jacob Garcia
 
 PokeGame 327 is a game currently under development for ISU class COM S 327. It is a Pokemon-style game, and it is expected to be finished by May when the class concludes. Please see below sections for information about the game.
@@ -16,6 +16,11 @@ The map is randomly generated each time with different roads and terrain.
 - PokeMarts (M): Magenta; one 2x2 PokeMart on each map.
 - PokeCenters (C): Same as PokeMart.
 
+## Controls 
+
+There are only a few things you can do at the moment. Right now when you load in the game, type i to see available commands.
+You can move in any of the cardinal directions or you can fly to a specific point on the map. 
+
 ## Running the Game
 
 To run the game:
@@ -25,5 +30,13 @@ To run the game:
 
 ### Updates
 
+**1.02 (2/2/24)**
+- Added the World Map.
+- Ability to move from map to map.
+- Lined up paths to connect all maps with gates. 
+- Closed paths at world borders. 
+- Buildings are now not guaranteed to spawn everytime. Lower chances the farther you go out. 
+
 **1.01 (1/25/24)**
-- Initial creation and added map generation.
+- Initial creation.
+- Map creation.

@@ -1,22 +1,34 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.01
+Version: 1.02
 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
-//Prototypes
-void GenerateMap();
-void PrintMap();
-char* FindTerrain();
-
-//Global variables
+//Constants
 #define ROWS 21
 #define COLUMNS 80
-char* map[ROWS][COLUMNS];
+#define WORLDROWS 401
+#define WORLDCOLUMNS 401
+
+//Structs
+struct map {
+    char* map[ROWS][COLUMNS];
+    int x;
+    int y;
+    int northEnt;
+    int southEnt;
+    int westEnt;
+    int eastEnt;
+};
+
+//Prototypes
+struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y);
+void PrintMap(struct map);
+char* FindTerrain();
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -47,14 +59,77 @@ char* PKMART = MAGENTA "M" RESET;
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
-    GenerateMap();
-    PrintMap();
 
+    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; //NOTE Maybe for fun add something that prints every single map
+
+    for (int i = 0; i < WORLDROWS; i++) {
+        for (int j = 0; j < WORLDCOLUMNS; j++) {
+            worldMap[i][j] = NULL;
+        }
+    }
+
+    int x = 200;
+    int y = 200;
+    struct map currentMap = GenerateMap(worldMap, x, y);
+
+    //Start movement 
+    char command = 'c';
+    while (command != 'q') {
+        system("clear");
+        PrintMap(currentMap);
+
+        printf("What would you like to do next? Type i to see available options.\n");
+        scanf(" %c", &command);
+        //Instructions
+        if (command == 'i') {
+            system("clear");
+            printf("%sCOMMAND LIST%s\n", GREEN, RESET);
+            printf("n: Move to the map immediately north of the current map and display it.\n"
+                "s: Move to the map immediately south of the current map and display it.\n"
+                "e: Move to the map immediately east of the current map and display it.\n"
+                "w: Move to the map immediately west of the current map and display it.\n"
+                "f x y: x and y are integers; Fly2 to map (x, y) and display it.\n"
+                "q: Quit the game.\n");
+            printf("\nType c to continue: ");
+            while (command != 'c') scanf("%c", &command);
+            continue;
+        }
+        if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
+            if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
+            if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
+            if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
+            if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
+
+            currentMap = GenerateMap(worldMap, x, y);
+            continue;
+        }
+        if (command == 'f') {
+            int oldX = x;
+            int oldY = y;
+            //printf("Fly to (x y): ");
+            scanf(" %d %d", &x, &y);
+            x += 200;
+            y += 200;
+            if (x > 400 || y > 400 || x < 0 || y < 0) {
+                x = oldX;
+                y = oldY;
+                continue;
+            }
+            currentMap = GenerateMap(worldMap, x, y);
+        }
+    }
+
+    printf("\n");
     return 0;
 }
 
-void GenerateMap() {
-    //Fill with blank space TEMP
+struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
+    //Check if map already exists
+    if (worldMap[x][y] != NULL) return *worldMap[x][y];
+
+    char* map[ROWS][COLUMNS];
+
+    //Fill with blank space
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
             map[i][j] = " ";
@@ -101,9 +176,30 @@ void GenerateMap() {
     }
 
     //Set up roads
-    //West to East
+    //Check if any maps exist around this new map, change gate to match other map. If not generate new ones. 
     int westEnt = rand() % (ROWS - 2) + 1;
     int eastEnt = rand() % (ROWS - 2) + 1;
+    int northEnt = rand() % (COLUMNS - 2) + 1;
+    int southEnt = rand() % (COLUMNS - 2) + 1;
+
+    //Check North
+    if (y < 400 && worldMap[x][y + 1] != NULL) {
+        northEnt = worldMap[x][y + 1]->southEnt;
+    }
+    //Check South
+    if (y > 0 && worldMap[x][y - 1] != NULL) {
+        southEnt = worldMap[x][y - 1]->northEnt;
+    }
+    //Check West
+    if (x > 0 && worldMap[x - 1][y] != NULL) {
+        westEnt = worldMap[x - 1][y]->eastEnt;
+    }
+    //Check East
+    if (x < 400 && worldMap[x + 1][y] != NULL) {
+        eastEnt = worldMap[x + 1][y]->westEnt;
+    }
+
+    //Connect West to East
     map[westEnt][0] = ROAD;
     map[eastEnt][COLUMNS - 1] = ROAD;
 
@@ -123,9 +219,7 @@ void GenerateMap() {
         map[westEntCpy][interCol] = ROAD;
     }
 
-    //North to South
-    int northEnt = rand() % (COLUMNS - 2) + 1;
-    int southEnt = rand() % (COLUMNS - 2) + 1;
+    //Connect North to South
     map[0][northEnt] = ROAD;
     map[ROWS - 1][southEnt] = ROAD;
 
@@ -145,10 +239,37 @@ void GenerateMap() {
         map[interRow][northEntCpy] = ROAD;
     }
 
+    //If gate on border, close it
+    if (x == 400) map[eastEnt][COLUMNS - 1] = MTN;
+    if (x == 0) map[westEnt][0] = MTN;
+    if (y == 400) map[0][northEnt] = MTN;
+    if (y == 0) map[ROWS - 1][southEnt] = MTN;
+
     //Place PokeMart and PokeCenter 
     int buidlingsPlaced = 0;
-    char* building = CNTR;
-    while (buidlingsPlaced != 2) {
+    int buildingsToBePlaced = 2;
+    char* building;
+    int randBuilding = rand() % 2 + 1;
+    if (randBuilding == 1) building = CNTR;
+    if (randBuilding == 2) building = PKMART;
+
+    if (!(x == 200 && y == 200)) {
+        double equation = abs(x - 200) + abs(y - 200);
+        equation *= -45;
+        equation /= 200.00;
+        equation += 50;
+        //equation /= 100.00;
+        if (equation < 5) equation = 5;
+        
+        int probBuildings = 0;
+        for (int i = 0; i < 2; i++) {
+            double prob = ((double)rand() / RAND_MAX) * 100.00;
+            if (prob <= equation) probBuildings++;
+        }
+        buildingsToBePlaced = probBuildings;
+    }
+
+    while (buidlingsPlaced != buildingsToBePlaced) {
         /* Randomly pick spots on map, check 4 conditions, if pass place, else, pick new point. 
         1. Doesn't go out of bounds
         2. There is no road in placement. 
@@ -156,8 +277,8 @@ void GenerateMap() {
         4. Not placed on other building 
         */
         int spotFound = 0;
-        int topOrBottom = rand() % 2 + 1;
         while (spotFound == 0) {
+            int topOrBottom = rand() % 2 + 1;
             //Top
             if (topOrBottom == 1) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
@@ -202,19 +323,44 @@ void GenerateMap() {
             }
         }
 
-        topOrBottom = rand() % 2 + 1;
-        building = PKMART;
+        if (building == CNTR) {
+            building = PKMART;
+        } else {
+            building = CNTR;
+        } 
         buidlingsPlaced++;
     }
-}
 
-void PrintMap() {
+    struct map newMap;
+
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            printf("%s", map[i][j]);
+            newMap.map[i][j] = map[i][j];
+        }
+    }
+    newMap.x = x;
+    newMap.y = y;
+    newMap.northEnt = northEnt;
+    newMap.southEnt = southEnt;
+    newMap.westEnt = westEnt;
+    newMap.eastEnt = eastEnt;
+
+    worldMap[x][y] = malloc(sizeof(struct map));
+    if (worldMap[x][y] != NULL) {
+        memcpy(worldMap[x][y], &newMap, sizeof(struct map));
+    }
+
+    return newMap;
+}
+
+void PrintMap(struct map currMap) {
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLUMNS; j++) {
+            printf("%s", currMap.map[i][j]);
         }
         printf("\n");
     }
+    printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
 char* FindTerrain() {
