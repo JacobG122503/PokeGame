@@ -32,9 +32,10 @@ typedef struct PlayerChar {
 
 //Prototypes
 void PlacePC(struct map *);
-struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y);
+struct map GenerateMap(int x, int y);
 void PrintMap(struct map);
 char* FindTerrain();
+void DeleteWorld();
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -64,10 +65,10 @@ char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
 char* PC = WHITE "@" RESET;
 
-int main(int argc, char *argv[]) {
-    srand(time(NULL));
+struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
 
-    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
+int main(int argc, char *argv[]) {
+    srand(time(NULL)); //TODO add a way to save seeds for debugging purposes
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
-    GenerateMap(worldMap, x, y);
+    GenerateMap(x, y);
     PlacePC(worldMap[x][y]);
     struct map currentMap = *worldMap[x][y];
 
@@ -86,6 +87,10 @@ int main(int argc, char *argv[]) {
     while (command != 'q') {
         system("clear");
         PrintMap(currentMap);
+
+        //Call alg here and print
+
+        break;
 
         printf("What would you like to do next? Type i to see available options.\n");
         scanf(" %c", &command);
@@ -109,7 +114,7 @@ int main(int argc, char *argv[]) {
             if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
             if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
 
-            currentMap = GenerateMap(worldMap, x, y);
+            currentMap = GenerateMap(x, y);
             continue;
         }
         if (command == 'f') {
@@ -123,11 +128,13 @@ int main(int argc, char *argv[]) {
                 y = oldY;
                 continue;
             }
-            currentMap = GenerateMap(worldMap, x, y);
+            currentMap = GenerateMap(x, y);
         }
     }
 
-    printf("\n");
+    printf("Closing game...\n");
+    DeleteWorld();
+
     return 0;
 }
 
@@ -148,7 +155,7 @@ void PlacePC(struct map *map) {
     }
 }
 
-struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
+struct map GenerateMap(int x, int y) {
     //Check if map already exists
     if (worldMap[x][y] != NULL) return *worldMap[x][y];
 
@@ -403,3 +410,13 @@ char* FindTerrain() {
 
     return NULL;
 }
+
+void DeleteWorld() {
+    for (int i = 0; i < WORLDROWS; i++) {
+        for (int j = 0; j < WORLDCOLUMNS; j++) {
+            free(worldMap[i][j]);
+            worldMap[i][j] = NULL;
+        }
+    }
+}
+
