@@ -25,7 +25,13 @@ struct map {
     int eastEnt;
 };
 
+typedef struct PlayerChar {
+    int x;
+    int y;
+} PlayerChar;
+
 //Prototypes
+void PlacePC(struct map *);
 struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y);
 void PrintMap(struct map);
 char* FindTerrain();
@@ -56,11 +62,12 @@ char* CLRNG = GREEN "." RESET;
 char* WATER = CYAN "~" RESET;
 char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
+char* PC = WHITE "@" RESET;
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
 
-    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; //NOTE Maybe for fun add something that prints every single map
+    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -70,7 +77,9 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
-    struct map currentMap = GenerateMap(worldMap, x, y);
+    GenerateMap(worldMap, x, y);
+    PlacePC(worldMap[x][y]);
+    struct map currentMap = *worldMap[x][y];
 
     //Start movement 
     char command = 'c';
@@ -106,7 +115,6 @@ int main(int argc, char *argv[]) {
         if (command == 'f') {
             int oldX = x;
             int oldY = y;
-            //printf("Fly to (x y): ");
             scanf(" %d %d", &x, &y);
             x += 200;
             y += 200;
@@ -121,6 +129,23 @@ int main(int argc, char *argv[]) {
 
     printf("\n");
     return 0;
+}
+
+void PlacePC(struct map *map) {
+    int placed = 0;
+
+    while (placed == 0) {
+        int row = rand() % (ROWS - 2) + 1;
+        int col = rand() % (COLUMNS - 2) + 1;
+
+        if (strcmp(map->map[row][col], ROAD) == 0) {
+            map->map[row][col] = PC;
+            PlayerChar PC;
+            PC.x = row;
+            PC.y = col;
+            placed = 1;
+        }
+    }
 }
 
 struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
@@ -258,7 +283,6 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         equation *= -45;
         equation /= 200.00;
         equation += 50;
-        //equation /= 100.00;
         if (equation < 5) equation = 5;
         
         int probBuildings = 0;
@@ -331,6 +355,7 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         buidlingsPlaced++;
     }
 
+    //Copy map over to World Map
     struct map newMap;
 
     for (int i = 0; i < ROWS; i++) {
