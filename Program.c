@@ -7,15 +7,19 @@ Version: 1.02
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include "heap.h"
+#include <limits.h>
 
 //Constants
 #define ROWS 21
 #define COLUMNS 80
 #define WORLDROWS 401
 #define WORLDCOLUMNS 401
+#define heightpair(pair) (map->height[pair[dim_y]][pair[dim_x]])
 
 //Structs
 struct map {
+    uint8_t height[COLUMNS][ROWS];
     char* map[ROWS][COLUMNS];
     int x;
     int y;
@@ -24,6 +28,20 @@ struct map {
     int westEnt;
     int eastEnt;
 };
+
+typedef struct path {
+  heap_node_t *hn;
+  uint8_t pos[2];
+  int32_t cost;
+} path;
+
+typedef enum dim {
+  dim_x,
+  dim_y,
+  num_dims
+} dim_t;
+
+typedef int16_t pair_t[num_dims];
 
 typedef struct PlayerChar {
     int x;
@@ -420,3 +438,54 @@ void DeleteWorld() {
     }
 }
 
+static int32_t path_cmp(const void *key, const void *with) {
+  return ((path_t *) key)->cost - ((path_t *) with)->cost;
+}
+
+static void dijkstra(struct map *map, pair_t from)
+{
+  static path path[COLUMNS][ROWS], *p;
+  static uint32_t initialized = 0;
+  heap_t h;
+  uint32_t x, y;
+
+  if (!initialized) {
+    for (y = 0; y < COLUMNS; y++) {
+      for (x = 0; x < ROWS; x++) {
+        path[y][x].pos[dim_y] = y;
+        path[y][x].pos[dim_x] = x;
+      }
+    }
+    initialized = 1;
+  }
+  
+  for (y = 0; y < COLUMNS; y++) {
+    for (x = 0; x < ROWS; x++) {
+      path[y][x].cost = INT_MAX;
+    }
+  }
+
+  path[from[dim_y]][from[dim_x]].cost = 0;
+
+  heap_init(&h, path_cmp, NULL);
+
+  for (y = 1; y < COLUMNS - 1; y++) {
+    for (x = 1; x < ROWS - 1; x++) {
+      path[y][x].hn = heap_insert(&h, &path[y][x]);
+    }
+  }
+
+  while ((p = heap_remove_min(&h))) {
+    p->hn = NULL;
+
+    if ((path[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
+        (path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
+         ((p->cost + heightpair(p->pos)) ))) {
+            
+      path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost = p->cost + heightpair(p->pos);
+
+      heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]
+                                           [p->pos[dim_x]    ].hn);
+    }
+  }
+}
