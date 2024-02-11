@@ -15,12 +15,11 @@ Version: 1.02
 #define COLUMNS 80
 #define WORLDROWS 401
 #define WORLDCOLUMNS 401
-#define heightpair(pair) (map->height[pair[dim_y]][pair[dim_x]])
 
 //Structs
 struct map {
-    uint8_t height[COLUMNS][ROWS];
     char* map[ROWS][COLUMNS];
+    int weights[ROWS][COLUMNS];
     int x;
     int y;
     int northEnt;
@@ -31,29 +30,31 @@ struct map {
 
 typedef struct path {
   heap_node_t *hn;
-  uint8_t pos[2];
-  int32_t cost;
+  int x;
+  int y;
+  int cost;
 } path;
-
-typedef enum dim {
-  dim_x,
-  dim_y,
-  num_dims
-} dim_t;
-
-typedef int16_t pair_t[num_dims];
 
 typedef struct PlayerChar {
     int x;
     int y;
+    int worldX;
+    int worldY;
 } PlayerChar;
 
+typedef enum {
+    hikerNPC,
+    rivalNPC
+} npc;
+
 //Prototypes
-void PlacePC(struct map *);
+void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(struct map);
 char* FindTerrain();
 void DeleteWorld();
+static int32_t path_cmp(const void *key, const void *with);
+static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -74,6 +75,7 @@ Centers and Pokemarts (buildings), respectively. Colons (:) are long grass and p
 */
 //Elements
 char* MTN = GREY "%" RESET;
+char* BLDR = GREY "%" RESET;
 char* TREE = GREY "^" RESET;
 char* ROAD = YELLOW "#" RESET;
 char* LNGR = GREEN ":" RESET;
@@ -84,6 +86,7 @@ char* PKMART = MAGENTA "M" RESET;
 char* PC = WHITE "@" RESET;
 
 struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
+PlayerChar Player;
 
 int main(int argc, char *argv[]) {
     srand(time(NULL)); //TODO add a way to save seeds for debugging purposes
@@ -97,7 +100,7 @@ int main(int argc, char *argv[]) {
     int x = 200;
     int y = 200;
     GenerateMap(x, y);
-    PlacePC(worldMap[x][y]);
+    PlacePC(x, y);
     struct map currentMap = *worldMap[x][y];
 
     //Start movement 
@@ -107,6 +110,7 @@ int main(int argc, char *argv[]) {
         PrintMap(currentMap);
 
         //Call alg here and print
+        Dijkstra(&currentMap, hikerNPC, Player.x, Player.y);
 
         break;
 
@@ -156,7 +160,8 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void PlacePC(struct map *map) {
+void PlacePC(int worldX, int worldY) {
+    struct map *map = worldMap[worldX][worldY];
     int placed = 0;
 
     while (placed == 0) {
@@ -165,9 +170,11 @@ void PlacePC(struct map *map) {
 
         if (strcmp(map->map[row][col], ROAD) == 0) {
             map->map[row][col] = PC;
-            PlayerChar PC;
-            PC.x = row;
-            PC.y = col;
+
+            Player.x = row;
+            Player.y = col;
+            Player.worldX = worldX;
+            Player.worldY = worldY;
             placed = 1;
         }
     }
@@ -187,14 +194,14 @@ struct map GenerateMap(int x, int y) {
     }
     //Make border 
     for (int i = 0; i < COLUMNS; i++) {
-        map[0][i] = MTN;
+        map[0][i] = BLDR;
     }
     for (int i = 1; i < ROWS - 1; i++) {
-        map[i][0] = MTN;
-        map[i][COLUMNS - 1] = MTN;
+        map[i][0] = BLDR;
+        map[i][COLUMNS - 1] = BLDR;
     }
     for (int i = 0; i < COLUMNS; i++) {
-        map[ROWS - 1][i] = MTN;
+        map[ROWS - 1][i] = BLDR;
     }
 
     //Fill in middle
@@ -438,54 +445,104 @@ void DeleteWorld() {
     }
 }
 
-static int32_t path_cmp(const void *key, const void *with) {
-  return ((path_t *) key)->cost - ((path_t *) with)->cost;
+static int32_t path_cmp(const void *key, const void *with){
+  return ((path *) key)->cost - ((path *) with)->cost;
 }
 
-static void dijkstra(struct map *map, pair_t from)
-{
-  static path path[COLUMNS][ROWS], *p;
-  static uint32_t initialized = 0;
-  heap_t h;
-  uint32_t x, y;
+/*
+Credit to Aren Ashlock for inspiration
+*/
+static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
+    path npc_cost_path[ROWS][COLUMNS], *npc_c_p;
+    heap_t h;
 
-  if (!initialized) {
-    for (y = 0; y < COLUMNS; y++) {
-      for (x = 0; x < ROWS; x++) {
-        path[y][x].pos[dim_y] = y;
-        path[y][x].pos[dim_x] = x;
-      }
+    //Initialize terrain weights
+    if (npcType == hikerNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                char *terrain = map->map[i][j];
+
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                    map->weights[i][j] = 10;
+                } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, MTN) || !strcmp(terrain, TREE)) {
+                    map->weights[i][j] = 15;
+                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                    map->weights[i][j] = 50;
+                } else {
+                    map->weights[i][j] = INT_MAX;
+                }
+            }
+        }
     }
-    initialized = 1;
-  }
+
+    if (npcType == rivalNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                char *terrain = map->map[i][j];
+
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                    map->weights[i][j] = 10;
+                } else if (!strcmp(terrain, LNGR)) {
+                    map->weights[i][j] = 20;
+                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                    map->weights[i][j] = 50;
+                } else {
+                    map->weights[i][j] = INT_MAX;
+                }
+            }
+        }
+    }
   
-  for (y = 0; y < COLUMNS; y++) {
-    for (x = 0; x < ROWS; x++) {
-      path[y][x].cost = INT_MAX;
+    // Set cost of all cells to INT_MAX 
+    for (int i = 0; i < ROWS; i++){
+        for (int j = 0; j < COLUMNS; j++){
+            npc_cost_path[i][j].hn = NULL;
+            npc_cost_path[i][j].y = i;
+            npc_cost_path[i][j].x = j;
+            npc_cost_path[i][j].cost = INT_MAX;
+        }
     }
-  }
 
-  path[from[dim_y]][from[dim_x]].cost = 0;
+    npc_cost_path[playerY][playerX].cost = 0;
 
-  heap_init(&h, path_cmp, NULL);
+    heap_init(&h, path_cmp, NULL);
 
-  for (y = 1; y < COLUMNS - 1; y++) {
-    for (x = 1; x < ROWS - 1; x++) {
-      path[y][x].hn = heap_insert(&h, &path[y][x]);
+    //Go through and insert into heap if not infinity
+    for(int i = 0; i < ROWS - 2; i++){
+        for(int j = 0; j < COLUMNS - 2; j++){
+            if(map->weights[i][j] != INT_MAX){
+                npc_cost_path[i][j].hn = heap_insert(&h, &npc_cost_path[i][j]);
+            }
+        }
     }
-  }
 
-  while ((p = heap_remove_min(&h))) {
-    p->hn = NULL;
+    while ((npc_c_p = heap_remove_min(&h))){
+        npc_c_p->hn = NULL;
 
-    if ((path[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
-        (path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
-         ((p->cost + heightpair(p->pos)) ))) {
-            
-      path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost = p->cost + heightpair(p->pos);
-
-      heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]
-                                           [p->pos[dim_x]    ].hn);
+        // Check all surrounding of the minimum on heap
+        for(int i = -1; i <= 1; i++){
+            for(int j = -1; j <= 1; j++){
+                if (!(i == 0 && j == 0) && // If spot is not center, find shortest path.
+                    (npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].hn) &&
+                    (npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].cost > ((npc_c_p->cost + map->weights[npc_c_p->y][npc_c_p->x])))){
+                        npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].cost = ((npc_c_p->cost + map->weights[npc_c_p->y][npc_c_p->x]));
+                        heap_decrease_key_no_replace(&h, npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].hn);
+                }
+            }
+        }
     }
-  }
+
+    // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
+    for (int i = 0; i < ROWS; i++){
+        for (int j = 0; j < COLUMNS; j++){
+            if(npc_cost_path[i][j].cost == INT_MAX){
+                printf("   ");
+            }
+
+            else{
+                printf("%02d ", npc_cost_path[i][j].cost % 100);
+            }
+        }
+        printf("\n");
+    }
 }
