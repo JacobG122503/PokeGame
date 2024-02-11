@@ -110,7 +110,10 @@ int main(int argc, char *argv[]) {
         PrintMap(currentMap);
 
         //Call alg here and print
+        printf("HIKER");
         Dijkstra(&currentMap, hikerNPC, Player.x, Player.y);
+        // printf("RIVAL");
+        // Dijkstra(&currentMap, rivalNPC, Player.x, Player.y);
 
         break;
 
@@ -473,9 +476,8 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
                 }
             }
         }
-    }
-
-    if (npcType == rivalNPC) {
+    } 
+    else if (npcType == rivalNPC) {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
                 char *terrain = map->map[i][j];
@@ -508,8 +510,8 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     heap_init(&h, path_cmp, NULL);
 
     //Go through and insert into heap if not infinity
-    for(int i = 0; i < ROWS - 2; i++){
-        for(int j = 0; j < COLUMNS - 2; j++){
+    for(int i = 1; i < ROWS - 1; i++){
+        for(int j = 1; j < COLUMNS - 1; j++){
             if(map->weights[i][j] != INT_MAX){
                 npc_cost_path[i][j].hn = heap_insert(&h, &npc_cost_path[i][j]);
             }
@@ -540,9 +542,10 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             }
 
             else{
-                printf("%02d ", npc_cost_path[i][j].cost % 100);
+                printf("%2d ", npc_cost_path[i][j].cost % 100);
             }
         }
         printf("\n");
     }
+    
 }
