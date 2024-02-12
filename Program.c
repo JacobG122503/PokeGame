@@ -7,8 +7,9 @@ Version: 1.02
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include "heap.h"
 #include <limits.h>
+
+#include "heap.h"
 
 //Constants
 #define ROWS 21
@@ -51,6 +52,7 @@ typedef enum {
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(struct map);
+void PrintArray(int currMap[ROWS][COLUMNS]);
 char* FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
@@ -75,7 +77,6 @@ Centers and Pokemarts (buildings), respectively. Colons (:) are long grass and p
 */
 //Elements
 char* MTN = GREY "%" RESET;
-char* BLDR = GREY "%" RESET;
 char* TREE = GREY "^" RESET;
 char* ROAD = YELLOW "#" RESET;
 char* LNGR = GREEN ":" RESET;
@@ -86,10 +87,21 @@ char* PKMART = MAGENTA "M" RESET;
 char* PC = WHITE "@" RESET;
 
 struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
-PlayerChar Player;
+PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    srand(time(NULL)); //TODO add a way to save seeds for debugging purposes
+    time_t seed = time(NULL);
+    srand(seed); 
+
+    FILE *seedFile;
+
+    seedFile = fopen("seeds.txt", "a");
+
+    fprintf(seedFile, "%ld\n", seed);
+
+    fclose(seedFile);
+
+    Player = malloc(sizeof(PlayerChar));
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -110,10 +122,10 @@ int main(int argc, char *argv[]) {
         PrintMap(currentMap);
 
         //Call alg here and print
-        printf("HIKER");
-        Dijkstra(&currentMap, hikerNPC, Player.x, Player.y);
-        // printf("RIVAL");
-        // Dijkstra(&currentMap, rivalNPC, Player.x, Player.y);
+        printf("HIKER\n");
+        Dijkstra(&currentMap, hikerNPC, Player->x, Player->y);
+        // printf("RIVAL\n");
+        //Dijkstra(&currentMap, rivalNPC, Player->x, Player->y);
 
         break;
 
@@ -171,13 +183,13 @@ void PlacePC(int worldX, int worldY) {
         int row = rand() % (ROWS - 2) + 1;
         int col = rand() % (COLUMNS - 2) + 1;
 
-        if (strcmp(map->map[row][col], ROAD) == 0) {
+        if (!strcmp(map->map[row][col], ROAD)) {
             map->map[row][col] = PC;
 
-            Player.x = row;
-            Player.y = col;
-            Player.worldX = worldX;
-            Player.worldY = worldY;
+            Player->x = row;
+            Player->y = col;
+            Player->worldX = worldX;
+            Player->worldY = worldY;
             placed = 1;
         }
     }
@@ -197,14 +209,14 @@ struct map GenerateMap(int x, int y) {
     }
     //Make border 
     for (int i = 0; i < COLUMNS; i++) {
-        map[0][i] = BLDR;
+        map[0][i] = MTN;
     }
     for (int i = 1; i < ROWS - 1; i++) {
-        map[i][0] = BLDR;
-        map[i][COLUMNS - 1] = BLDR;
+        map[i][0] = MTN;
+        map[i][COLUMNS - 1] = MTN;
     }
     for (int i = 0; i < COLUMNS; i++) {
-        map[ROWS - 1][i] = BLDR;
+        map[ROWS - 1][i] = MTN;
     }
 
     //Fill in middle
@@ -423,6 +435,20 @@ void PrintMap(struct map currMap) {
     printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
+void PrintArray(int currMap[ROWS][COLUMNS]) {
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLUMNS; j++) {
+            if (currMap[i][j] == SHRT_MAX) {
+                printf("M ");
+                continue;
+            }
+            printf("%2d ", currMap[i][j]);
+        }
+        printf("\n");
+    }
+    //printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
+}
+
 char* FindTerrain() {
     int ter = rand() % 4 + 1;
 
@@ -467,12 +493,12 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
 
                 if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
                     map->weights[i][j] = 10;
-                } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, MTN) || !strcmp(terrain, TREE)) {
+                } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
                     map->weights[i][j] = 15;
                 } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
                     map->weights[i][j] = 50;
                 } else {
-                    map->weights[i][j] = INT_MAX;
+                    map->weights[i][j] = SHRT_MAX;
                 }
             }
         }
@@ -489,19 +515,21 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
                 } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
                     map->weights[i][j] = 50;
                 } else {
-                    map->weights[i][j] = INT_MAX;
+                    map->weights[i][j] = SHRT_MAX;
                 }
             }
         }
     }
+
+    PrintArray(map->weights);
   
-    // Set cost of all cells to INT_MAX 
+    // Set cost of all cells to SHRT_MAX 
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
             npc_cost_path[i][j].hn = NULL;
             npc_cost_path[i][j].y = i;
             npc_cost_path[i][j].x = j;
-            npc_cost_path[i][j].cost = INT_MAX;
+            npc_cost_path[i][j].cost = SHRT_MAX;
         }
     }
 
@@ -512,7 +540,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     //Go through and insert into heap if not infinity
     for(int i = 1; i < ROWS - 1; i++){
         for(int j = 1; j < COLUMNS - 1; j++){
-            if(map->weights[i][j] != INT_MAX){
+            if(map->weights[i][j] != SHRT_MAX){
                 npc_cost_path[i][j].hn = heap_insert(&h, &npc_cost_path[i][j]);
             }
         }
@@ -537,7 +565,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
-            if(npc_cost_path[i][j].cost == INT_MAX){
+            if(npc_cost_path[i][j].cost == SHRT_MAX){
                 printf("   ");
             }
 

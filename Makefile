@@ -2,7 +2,7 @@ Program: Program.o heap.o
 	gcc Program.o heap.o -o Program
 
 clean:
-	rm -f Program *~ core *.o
+	rm -f Program *~ core *.o seeds.txt
 
 brun: Program.o
 	gcc Program.c -o Program
