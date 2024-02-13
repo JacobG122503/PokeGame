@@ -13,6 +13,7 @@ The map is randomly generated each time with different roads and terrain.
 - Water (~): Blue; you cannot pass through.
 - Short grass (.): Green; clearings where you can walk through without encountering Pokemon.
 - Tall grass (:): Green; you can walk through tall grass but might be stopped by Pokemon.
+- Roads (#): Yellow; they go from north to south and east to west. 
 - PokeMarts (M): Magenta; one 2x2 PokeMart on each map.
 - PokeCenters (C): same as PokeMart.
 
@@ -20,7 +21,7 @@ The map is randomly generated each time with different roads and terrain.
 
 There are different types of characters. The player, NPCs, and Pokemon.
 
-- PC (@): Yellow; the player.
+- PC (@): White; the player.
 
 ## Controls 
 
