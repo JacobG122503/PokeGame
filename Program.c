@@ -91,7 +91,7 @@ PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
     time_t seed = time(NULL);
-    srand(1707766430); 
+    srand(seed); 
 
     FILE *seedFile;
 
@@ -124,8 +124,8 @@ int main(int argc, char *argv[]) {
         //Call alg here and print
         printf("HIKER\n");
         Dijkstra(&currentMap, hikerNPC, Player->x, Player->y);
-        // printf("RIVAL\n");
-        //Dijkstra(&currentMap, rivalNPC, Player->x, Player->y);
+        printf("RIVAL\n");
+        Dijkstra(&currentMap, rivalNPC, Player->x, Player->y);
 
         break;
 
@@ -435,20 +435,6 @@ void PrintMap(struct map currMap) {
     printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
-void PrintArray(int currMap[ROWS][COLUMNS]) {
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLUMNS; j++) {
-            if (currMap[i][j] == SHRT_MAX) {
-                printf("M ");
-                continue;
-            }
-            printf("%2d ", currMap[i][j]);
-        }
-        printf("\n");
-    }
-    printf("END: \n\n");
-}
-
 char* FindTerrain() {
     int ter = rand() % 4 + 1;
 
@@ -479,10 +465,10 @@ static int32_t path_cmp(const void *key, const void *with){
 }
 
 /*
-Credit to Aren Ashlock for inspiration
+Credit Geeks for Geeks for inspiration/structure
 */
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
-    path npc_cost_path[ROWS][COLUMNS], *npc_c_p;
+    path npcPath[ROWS][COLUMNS], *npcP;
     heap_t h;
 
     //Initialize terrain weights
@@ -520,20 +506,18 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             }
         }
     }
-
-    PrintArray(map->weights);
   
     // Set cost of all cells to SHRT_MAX 
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
-            npc_cost_path[i][j].hn = NULL;
-            npc_cost_path[i][j].y = i;
-            npc_cost_path[i][j].x = j;
-            npc_cost_path[i][j].cost = SHRT_MAX;
+            npcPath[i][j].y = j;
+            npcPath[i][j].x = i;
+            npcPath[i][j].hn = NULL;
+            npcPath[i][j].cost = SHRT_MAX;
         }
     }
 
-    npc_cost_path[playerX][playerY].cost = 0;
+    npcPath[playerX][playerY].cost = 0;
 
     heap_init(&h, path_cmp, NULL);
 
@@ -541,27 +525,26 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     for(int i = 1; i < ROWS - 1; i++){
         for(int j = 1; j < COLUMNS - 1; j++){
             if(map->weights[i][j] != SHRT_MAX){
-                npc_cost_path[i][j].hn = heap_insert(&h, &npc_cost_path[i][j]);
+                npcPath[i][j].hn = heap_insert(&h, &npcPath[i][j]);
             }
         }
     }
 
-    while ((npc_c_p = heap_remove_min(&h))){
-        npc_c_p->hn = NULL;
+    while ((npcP = heap_remove_min(&h))){
+        npcP->hn = NULL;
 
         // Check all surrounding of the minimum on heap
         for(int i = -1; i <= 1; i++){
             for(int j = -1; j <= 1; j++){
-                if (npc_c_p->x + i > ROWS - 1 || npc_c_p->y + j > COLUMNS - 1) continue;
-                if (npc_c_p->x > ROWS - 1 || npc_c_p->y > COLUMNS - 1) continue;
-                path current = npc_cost_path[npc_c_p->x + i][npc_c_p->y + j]; //npc_c_p->y + i
-                int centerWeight = map->weights[npc_c_p->x][npc_c_p->y];
-                if (current.cost == 0) printf("%d, > %d + %d = %d\n", current.cost, npc_c_p->cost, centerWeight, npc_c_p->cost + centerWeight);
-                if (!(i == 0 && j == 0) && // If spot is not center, find shortest path.
+                //Check if going out of bounds
+                if (npcP->x + i > ROWS - 1 || npcP->y + j > COLUMNS - 1) continue;
+                if (npcP->x > ROWS - 1 || npcP->y > COLUMNS - 1) continue;
+                path current = npcPath[npcP->x + i][npcP->y + j]; 
+                int centerWeight = map->weights[npcP->x][npcP->y];
+                if (!(i == 0 && j == 0) && 
                     (current.hn) && 
-                    (current.cost > ((npc_c_p->cost + centerWeight)))) {
-                        npc_cost_path[npc_c_p->x + i][npc_c_p->y + j].cost = ((npc_c_p->cost + centerWeight));
-                        printf("%d\n",npc_cost_path[npc_c_p->x + i][npc_c_p->y + j].cost);
+                    (current.cost > ((npcP->cost + centerWeight)))) {
+                        npcPath[npcP->x + i][npcP->y + j].cost = ((npcP->cost + centerWeight));
                         heap_decrease_key_no_replace(&h, current.hn);
                 }
             }
@@ -571,13 +554,15 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
-            if(npc_cost_path[i][j].cost == SHRT_MAX){
-                printf("M  ");
+            if(npcPath[i][j].cost == SHRT_MAX){
+                printf("  ");
+                continue;
             }
-
-            else{
-                printf("%2d ", npc_cost_path[i][j].cost % 100);
+            if (i == playerX && j == playerY) {
+                printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
+                continue;
             }
+            printf("%2d ", npcPath[i][j].cost % 100);
         }
         printf("\n");
     }
