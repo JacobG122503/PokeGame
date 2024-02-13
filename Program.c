@@ -52,7 +52,6 @@ typedef enum {
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(struct map);
-void PrintArray(int currMap[ROWS][COLUMNS]);
 char* FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
@@ -510,8 +509,8 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     // Set cost of all cells to SHRT_MAX 
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
-            npcPath[i][j].y = j;
             npcPath[i][j].x = i;
+            npcPath[i][j].y = j;
             npcPath[i][j].hn = NULL;
             npcPath[i][j].cost = SHRT_MAX;
         }
