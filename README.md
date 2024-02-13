@@ -24,6 +24,8 @@ There are different types of characters. The player, NPCs, and Pokemon.
 
 ## Controls 
 
+NOTE: This version of the game (1.03) only prints the paths then exits. 
+
 There are only a few things you can do at the moment. Right now when you load in the game, type i to see available commands.
 You can move in any of the cardinal directions or you can fly to a specific point on the map. 
 
