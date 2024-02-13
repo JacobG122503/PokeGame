@@ -1,12 +1,15 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.02
+Version: 1.03
 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <limits.h>
+
+#include "heap.h"
 
 //Constants
 #define ROWS 21
@@ -17,6 +20,7 @@ Version: 1.02
 //Structs
 struct map {
     char* map[ROWS][COLUMNS];
+    int weights[ROWS][COLUMNS];
     int x;
     int y;
     int northEnt;
@@ -25,10 +29,33 @@ struct map {
     int eastEnt;
 };
 
+typedef struct path {
+  heap_node_t *hn;
+  int x;
+  int y;
+  int cost;
+} path;
+
+typedef struct PlayerChar {
+    int x;
+    int y;
+    int worldX;
+    int worldY;
+} PlayerChar;
+
+typedef enum {
+    hikerNPC,
+    rivalNPC
+} npc;
+
 //Prototypes
-struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y);
+void PlacePC(int worldX, int worldY);
+struct map GenerateMap(int x, int y);
 void PrintMap(struct map);
 char* FindTerrain();
+void DeleteWorld();
+static int32_t path_cmp(const void *key, const void *with);
+static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
 //Colors
 #define BLACK   "\x1b[30m"
@@ -56,11 +83,24 @@ char* CLRNG = GREEN "." RESET;
 char* WATER = CYAN "~" RESET;
 char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
+char* PC = WHITE "@" RESET;
+
+struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
+PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    srand(time(NULL));
+    time_t seed = time(NULL);
+    srand(seed); 
 
-    struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; //NOTE Maybe for fun add something that prints every single map
+    FILE *seedFile;
+
+    seedFile = fopen("seeds.txt", "a");
+
+    fprintf(seedFile, "%ld\n", seed);
+
+    fclose(seedFile);
+
+    Player = malloc(sizeof(PlayerChar));
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -70,13 +110,23 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
-    struct map currentMap = GenerateMap(worldMap, x, y);
+    GenerateMap(x, y);
+    PlacePC(x, y);
+    struct map currentMap = *worldMap[x][y];
 
     //Start movement 
     char command = 'c';
     while (command != 'q') {
         system("clear");
         PrintMap(currentMap);
+
+        //Call alg here and print
+        printf("HIKER\n");
+        Dijkstra(&currentMap, hikerNPC, Player->x, Player->y);
+        printf("RIVAL\n");
+        Dijkstra(&currentMap, rivalNPC, Player->x, Player->y);
+
+        break;
 
         printf("What would you like to do next? Type i to see available options.\n");
         scanf(" %c", &command);
@@ -100,13 +150,12 @@ int main(int argc, char *argv[]) {
             if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
             if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
 
-            currentMap = GenerateMap(worldMap, x, y);
+            currentMap = GenerateMap(x, y);
             continue;
         }
         if (command == 'f') {
             int oldX = x;
             int oldY = y;
-            //printf("Fly to (x y): ");
             scanf(" %d %d", &x, &y);
             x += 200;
             y += 200;
@@ -115,15 +164,37 @@ int main(int argc, char *argv[]) {
                 y = oldY;
                 continue;
             }
-            currentMap = GenerateMap(worldMap, x, y);
+            currentMap = GenerateMap(x, y);
         }
     }
 
-    printf("\n");
+    printf("Closing game...\n");
+    DeleteWorld();
+
     return 0;
 }
 
-struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int y) {
+void PlacePC(int worldX, int worldY) {
+    struct map *map = worldMap[worldX][worldY];
+    int placed = 0;
+
+    while (placed == 0) {
+        int row = rand() % (ROWS - 2) + 1;
+        int col = rand() % (COLUMNS - 2) + 1;
+
+        if (!strcmp(map->map[row][col], ROAD)) {
+            map->map[row][col] = PC;
+
+            Player->x = row;
+            Player->y = col;
+            Player->worldX = worldX;
+            Player->worldY = worldY;
+            placed = 1;
+        }
+    }
+}
+
+struct map GenerateMap(int x, int y) {
     //Check if map already exists
     if (worldMap[x][y] != NULL) return *worldMap[x][y];
 
@@ -258,7 +329,6 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         equation *= -45;
         equation /= 200.00;
         equation += 50;
-        //equation /= 100.00;
         if (equation < 5) equation = 5;
         
         int probBuildings = 0;
@@ -331,6 +401,7 @@ struct map GenerateMap(struct map *worldMap[WORLDROWS][WORLDCOLUMNS], int x, int
         buidlingsPlaced++;
     }
 
+    //Copy map over to World Map
     struct map newMap;
 
     for (int i = 0; i < ROWS; i++) {
@@ -377,4 +448,122 @@ char* FindTerrain() {
     }
 
     return NULL;
+}
+
+void DeleteWorld() {
+    for (int i = 0; i < WORLDROWS; i++) {
+        for (int j = 0; j < WORLDCOLUMNS; j++) {
+            free(worldMap[i][j]);
+            worldMap[i][j] = NULL;
+        }
+    }
+}
+
+static int32_t path_cmp(const void *key, const void *with){
+  return ((path *) key)->cost - ((path *) with)->cost;
+}
+
+/*
+Credit Geeks for Geeks for inspiration/structure
+*/
+static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
+    path npcPath[ROWS][COLUMNS], *npcP;
+    heap_t h;
+
+    //Initialize terrain weights
+    if (npcType == hikerNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                char *terrain = map->map[i][j];
+
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
+                    map->weights[i][j] = 10;
+                } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
+                    map->weights[i][j] = 15;
+                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                    map->weights[i][j] = 50;
+                } else {
+                    map->weights[i][j] = SHRT_MAX;
+                }
+            }
+        }
+    } 
+    else if (npcType == rivalNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                char *terrain = map->map[i][j];
+
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
+                    map->weights[i][j] = 10;
+                } else if (!strcmp(terrain, LNGR)) {
+                    map->weights[i][j] = 20;
+                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                    map->weights[i][j] = 50;
+                } else {
+                    map->weights[i][j] = SHRT_MAX;
+                }
+            }
+        }
+    }
+  
+    // Set cost of all cells to SHRT_MAX 
+    for (int i = 0; i < ROWS; i++){
+        for (int j = 0; j < COLUMNS; j++){
+            npcPath[i][j].x = i;
+            npcPath[i][j].y = j;
+            npcPath[i][j].hn = NULL;
+            npcPath[i][j].cost = SHRT_MAX;
+        }
+    }
+
+    npcPath[playerX][playerY].cost = 0;
+
+    heap_init(&h, path_cmp, NULL);
+
+    //Go through and insert into heap if not infinity
+    for(int i = 1; i < ROWS - 1; i++){
+        for(int j = 1; j < COLUMNS - 1; j++){
+            if(map->weights[i][j] != SHRT_MAX){
+                npcPath[i][j].hn = heap_insert(&h, &npcPath[i][j]);
+            }
+        }
+    }
+
+    while ((npcP = heap_remove_min(&h))){
+        npcP->hn = NULL;
+
+        // Check all surrounding of the minimum on heap
+        for(int i = -1; i <= 1; i++){
+            for(int j = -1; j <= 1; j++){
+                //Check if going out of bounds
+                if (npcP->x + i > ROWS - 1 || npcP->y + j > COLUMNS - 1) continue;
+                if (npcP->x > ROWS - 1 || npcP->y > COLUMNS - 1) continue;
+                path current = npcPath[npcP->x + i][npcP->y + j]; 
+                int centerWeight = map->weights[npcP->x][npcP->y];
+                if (!(i == 0 && j == 0) && 
+                    (current.hn) && 
+                    (current.cost > ((npcP->cost + centerWeight)))) {
+                        npcPath[npcP->x + i][npcP->y + j].cost = ((npcP->cost + centerWeight));
+                        heap_decrease_key_no_replace(&h, current.hn);
+                }
+            }
+        }
+    }
+
+    // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
+    for (int i = 0; i < ROWS; i++){
+        for (int j = 0; j < COLUMNS; j++){
+            if(npcPath[i][j].cost == SHRT_MAX){
+                printf("   ");
+                continue;
+            }
+            if (i == playerX && j == playerY) {
+                printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
+                continue;
+            }
+            printf("%2d ", npcPath[i][j].cost % 100);
+        }
+        printf("\n");
+    }
+    
 }
