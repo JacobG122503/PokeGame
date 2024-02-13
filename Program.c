@@ -1,7 +1,7 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.02
+Version: 1.03
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -555,7 +555,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
             if(npcPath[i][j].cost == SHRT_MAX){
-                printf("  ");
+                printf("   ");
                 continue;
             }
             if (i == playerX && j == playerY) {
