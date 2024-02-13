@@ -4,8 +4,8 @@ Program: Program.o heap.o
 clean:
 	rm -f Program *~ core *.o seeds.txt
 
-brun: Program.o
-	gcc Program.c -o Program
+brun: Program.o heap.o
+	gcc Program.o heap.o -o Program
 	./Program
 
 Program.o: Program.c 

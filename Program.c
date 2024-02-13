@@ -91,7 +91,7 @@ PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
     time_t seed = time(NULL);
-    srand(seed); 
+    srand(1707766430); 
 
     FILE *seedFile;
 
@@ -446,7 +446,7 @@ void PrintArray(int currMap[ROWS][COLUMNS]) {
         }
         printf("\n");
     }
-    //printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
+    printf("END: \n\n");
 }
 
 char* FindTerrain() {
@@ -491,7 +491,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             for (int j = 0; j < COLUMNS; j++) {
                 char *terrain = map->map[i][j];
 
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
                     map->weights[i][j] = 10;
                 } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
                     map->weights[i][j] = 15;
@@ -508,7 +508,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             for (int j = 0; j < COLUMNS; j++) {
                 char *terrain = map->map[i][j];
 
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
                     map->weights[i][j] = 10;
                 } else if (!strcmp(terrain, LNGR)) {
                     map->weights[i][j] = 20;
@@ -533,7 +533,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
         }
     }
 
-    npc_cost_path[playerY][playerX].cost = 0;
+    npc_cost_path[playerX][playerY].cost = 0;
 
     heap_init(&h, path_cmp, NULL);
 
@@ -552,11 +552,17 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
         // Check all surrounding of the minimum on heap
         for(int i = -1; i <= 1; i++){
             for(int j = -1; j <= 1; j++){
+                if (npc_c_p->x + i > ROWS - 1 || npc_c_p->y + j > COLUMNS - 1) continue;
+                if (npc_c_p->x > ROWS - 1 || npc_c_p->y > COLUMNS - 1) continue;
+                path current = npc_cost_path[npc_c_p->x + i][npc_c_p->y + j]; //npc_c_p->y + i
+                int centerWeight = map->weights[npc_c_p->x][npc_c_p->y];
+                if (current.cost == 0) printf("%d, > %d + %d = %d\n", current.cost, npc_c_p->cost, centerWeight, npc_c_p->cost + centerWeight);
                 if (!(i == 0 && j == 0) && // If spot is not center, find shortest path.
-                    (npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].hn) &&
-                    (npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].cost > ((npc_c_p->cost + map->weights[npc_c_p->y][npc_c_p->x])))){
-                        npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].cost = ((npc_c_p->cost + map->weights[npc_c_p->y][npc_c_p->x]));
-                        heap_decrease_key_no_replace(&h, npc_cost_path[npc_c_p->y + i][npc_c_p->x + j].hn);
+                    (current.hn) && 
+                    (current.cost > ((npc_c_p->cost + centerWeight)))) {
+                        npc_cost_path[npc_c_p->x + i][npc_c_p->y + j].cost = ((npc_c_p->cost + centerWeight));
+                        printf("%d\n",npc_cost_path[npc_c_p->x + i][npc_c_p->y + j].cost);
+                        heap_decrease_key_no_replace(&h, current.hn);
                 }
             }
         }
@@ -566,7 +572,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     for (int i = 0; i < ROWS; i++){
         for (int j = 0; j < COLUMNS; j++){
             if(npc_cost_path[i][j].cost == SHRT_MAX){
-                printf("   ");
+                printf("M  ");
             }
 
             else{
