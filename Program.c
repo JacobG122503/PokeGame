@@ -18,9 +18,27 @@ Version: 1.03
 #define WORLDCOLUMNS 401
 
 //Structs
+typedef enum {
+    hikerNPC,
+    rivalNPC,
+    pacerNPC,
+    wandererNPC,
+    sentryNPC,
+    explorerNPC,
+    NPCTYPES
+} npc;
+
+typedef struct NPCs {
+    int x;
+    int y;
+    npc type;
+} NPCs;
+
 struct map {
     char* map[ROWS][COLUMNS];
     int weights[ROWS][COLUMNS];
+    NPCs npcs[100];
+    int nmbOfNPCs;
     int x;
     int y;
     int northEnt;
@@ -43,12 +61,8 @@ typedef struct PlayerChar {
     int worldY;
 } PlayerChar;
 
-typedef enum {
-    hikerNPC,
-    rivalNPC
-} npc;
-
 //Prototypes
+void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(int worldX, int worldY);
@@ -60,6 +74,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 //Colors
 #define BLACK   "\x1b[30m"
 #define RED     "\x1b[31m"
+#define BLDRED  "\e[1;31m"
 #define GREEN   "\x1b[32m"
 #define YELLOW  "\x1b[33m"
 #define PURPLE  "\033[0;34m"
@@ -69,12 +84,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 #define RESET   "\x1b[0m"
 #define GREY    "\x1b[90m"
 
-/*
-Percent signs (%) represent
-boulders and mountains. Carrots (ˆ) represent tree and forests. Hashes (#) are roads. Cs and Ms are Pokemon ´
-Centers and Pokemarts (buildings), respectively. Colons (:) are long grass and periods (.) are clearings. 
-*/
-//Elements
+//Elements and Characters
 char* MTN = GREY "%" RESET;
 char* TREE = GREY "^" RESET;
 char* ROAD = YELLOW "#" RESET;
@@ -83,21 +93,61 @@ char* CLRNG = GREEN "." RESET;
 char* WATER = CYAN "~" RESET;
 char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
-char* PC = WHITE "@" RESET;
 
-struct map* worldMap[WORLDROWS][WORLDCOLUMNS]; 
+char* PC = WHITE "@" RESET;
+char* HIKER = BLDRED "h" RESET;
+char* RIVAL = BLDRED "r" RESET;
+char* PACER = BLDRED "p" RESET;
+char* WANDERER = BLDRED "w" RESET;
+char* SENTRY = BLDRED "s" RESET;
+char* EXPLORER = BLDRED "e" RESET;
+
+// • Hikers: These will be represented by the letter ’h’. Hikers path to the PC by following a maximum
+// gradient on the hiker map.
+// • Rivals: These will be represented by the letter ’r’. Rivals path to the PC by following a maximum
+// gradient on the rival map.
+// • Pacers: These will be represented by the letter ’p’. Pacers start with a direction and walk until they
+// hit some terrain they cannot traverse, then they turn around and repeat, pacing back and forth.
+// • Wanderers: These will be represented by the letter ’w’. Wanderers never leave the terrain region they
+// were spawned in. They have a direction and walk strait ahead to the edge of the terrain, whereupon
+// they turn in a random direction and repeat.
+// • Sentries: These will be represented by the letter ’s’. Sentries don’t move; they just wait for the action
+// to come to them.
+// • Explorers: These will be represented by the letter ’e’. Explorers move like wanderers, but they cross
+// terrain type boundaries, only changing to a new, random direction when they reach an impassable
+// terrain element
+
+struct map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
+    int numTrainers = 10; 
+    int i;
+
+    // --numtrainers switch
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--numtrainers") == 0) {
+            if (i + 1 < argc) {
+                numTrainers = atoi(argv[i + 1]); 
+                if (numTrainers > 100) {
+                    system("clear");
+                    printf("The max number of npcs is 100. (Why would you want that many anyway!?)");
+                    printf("\nProgram closed.");
+                    return 1;
+                }
+            } else {
+                printf("Error: --numtrainers switch requires an argument.\n");
+                return 1;
+            }
+        }
+    }
+
+    //Make seed and save into seeds.txt
     time_t seed = time(NULL);
     srand(seed); 
-
     FILE *seedFile;
-
     seedFile = fopen("seeds.txt", "a");
-
     fprintf(seedFile, "%ld\n", seed);
-
     fclose(seedFile);
 
     Player = malloc(sizeof(PlayerChar));
@@ -112,6 +162,7 @@ int main(int argc, char *argv[]) {
     int y = 200;
     GenerateMap(x, y);
     PlacePC(x, y);
+    SpawnNPCs(numTrainers, x, y);
     struct map currentMap = *worldMap[x][y];
 
     //Start movement 
@@ -168,6 +219,36 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+void SpawnNPCs(int number, int worldX, int worldY) {
+    struct map *currentMap = worldMap[worldX][worldY];
+    currentMap->nmbOfNPCs = number;
+    npc npcList[number];
+
+    for (int i = 0; i < number; i++) {
+        //Guarantees first two are hiker and rival
+        if (i == 0) {
+            npcList[i] = hikerNPC;
+            continue;
+        } else if (i == 1) {
+            npcList[i] = rivalNPC;
+            continue;
+        }
+        
+        int nextNpc = rand() % NPCTYPES;
+        npcList[i] = nextNpc;
+    }
+
+    //Initialize all the npcs
+    for (int i = 0; i < number; i++) {
+        NPCs currNPC;
+        currNPC.type = npcList[i];
+        currNPC.x = rand() % (ROWS - 2) + 1;
+        currNPC.y = rand() % (COLUMNS - 2) + 1;
+
+        currentMap->npcs[i] = currNPC;
+    }
+}
+
 void PlacePC(int worldX, int worldY) {
     struct map *map = worldMap[worldX][worldY];
     int placed = 0;
@@ -177,8 +258,6 @@ void PlacePC(int worldX, int worldY) {
         int col = rand() % (COLUMNS - 2) + 1;
 
         if (!strcmp(map->map[row][col], ROAD)) {
-            //map->map[row][col] = PC;
-
             Player->x = row;
             Player->y = col;
             Player->worldX = worldX;
@@ -420,9 +499,41 @@ struct map GenerateMap(int x, int y) {
 
 void PrintMap(int worldX, int worldY) {
     struct map currMap = *worldMap[worldX][worldY];
+
     //Place NPCs / PC
     if (worldX == Player->worldX && worldY == Player->worldY) {
         currMap.map[Player->x][Player->y] = PC;
+    }
+    for (int i = 0; i < currMap.nmbOfNPCs; i++) {
+        char *nextNPC;
+        NPCs currNPC = currMap.npcs[i];
+
+        switch (currNPC.type) {
+        case hikerNPC:
+            nextNPC = HIKER;
+            break;
+        case rivalNPC:
+            nextNPC = RIVAL;
+            break;
+        case pacerNPC:
+            nextNPC = PACER;
+            break;
+        case wandererNPC:
+            nextNPC = WANDERER;
+            break;
+        case sentryNPC:
+            nextNPC = SENTRY;
+            break;
+        case explorerNPC:
+            nextNPC = EXPLORER;
+            break;
+        default:
+            system("clear");
+            printf("Error generating and printing npcs");
+            exit(0);
+        }
+
+        currMap.map[currNPC.x][currNPC.y] = nextNPC;
     }
 
     //Print map
