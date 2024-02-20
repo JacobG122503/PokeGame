@@ -51,7 +51,7 @@ typedef enum {
 //Prototypes
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
-void PrintMap(struct map);
+void PrintMap(int worldX, int worldY);
 char* FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
@@ -118,15 +118,9 @@ int main(int argc, char *argv[]) {
     char command = 'c';
     while (command != 'q') {
         system("clear");
-        PrintMap(currentMap);
+        PrintMap(x, y);
 
-        //Call alg here and print
-        printf("HIKER\n");
         Dijkstra(&currentMap, hikerNPC, Player->x, Player->y);
-        printf("RIVAL\n");
-        Dijkstra(&currentMap, rivalNPC, Player->x, Player->y);
-
-        break;
 
         printf("What would you like to do next? Type i to see available options.\n");
         scanf(" %c", &command);
@@ -183,7 +177,7 @@ void PlacePC(int worldX, int worldY) {
         int col = rand() % (COLUMNS - 2) + 1;
 
         if (!strcmp(map->map[row][col], ROAD)) {
-            map->map[row][col] = PC;
+            //map->map[row][col] = PC;
 
             Player->x = row;
             Player->y = col;
@@ -424,7 +418,14 @@ struct map GenerateMap(int x, int y) {
     return newMap;
 }
 
-void PrintMap(struct map currMap) {
+void PrintMap(int worldX, int worldY) {
+    struct map currMap = *worldMap[worldX][worldY];
+    //Place NPCs / PC
+    if (worldX == Player->worldX && worldY == Player->worldY) {
+        currMap.map[Player->x][Player->y] = PC;
+    }
+
+    //Print map
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
             printf("%s", currMap.map[i][j]);
@@ -476,7 +477,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             for (int j = 0; j < COLUMNS; j++) {
                 char *terrain = map->map[i][j];
 
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
                     map->weights[i][j] = 10;
                 } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
                     map->weights[i][j] = 15;
@@ -493,7 +494,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
             for (int j = 0; j < COLUMNS; j++) {
                 char *terrain = map->map[i][j];
 
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD) || !strcmp(terrain, PC)) {
+                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
                     map->weights[i][j] = 10;
                 } else if (!strcmp(terrain, LNGR)) {
                     map->weights[i][j] = 20;
@@ -551,19 +552,19 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     }
 
     // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
-    for (int i = 0; i < ROWS; i++){
-        for (int j = 0; j < COLUMNS; j++){
-            if(npcPath[i][j].cost == SHRT_MAX){
-                printf("   ");
-                continue;
-            }
-            if (i == playerX && j == playerY) {
-                printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
-                continue;
-            }
-            printf("%2d ", npcPath[i][j].cost % 100);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < ROWS; i++){
+    //     for (int j = 0; j < COLUMNS; j++){
+    //         if(npcPath[i][j].cost == SHRT_MAX){
+    //             printf("   ");
+    //             continue;
+    //         }
+    //         if (i == playerX && j == playerY) {
+    //             printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
+    //             continue;
+    //         }
+    //         printf("%2d ", npcPath[i][j].cost % 100);
+    //     }
+    //     printf("\n");
+    // }
     
 }
