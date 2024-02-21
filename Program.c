@@ -8,6 +8,7 @@ Version: 1.03
 #include <time.h>
 #include <string.h>
 #include <limits.h>
+ #include <unistd.h>
 
 #include "heap.h"
 
@@ -16,6 +17,7 @@ Version: 1.03
 #define COLUMNS 80
 #define WORLDROWS 401
 #define WORLDCOLUMNS 401
+#define MAXNPC 500
 
 //Structs
 typedef enum {
@@ -37,7 +39,9 @@ typedef struct NPCs {
 struct map {
     char* map[ROWS][COLUMNS];
     int weights[ROWS][COLUMNS];
-    NPCs npcs[100];
+    NPCs npcs[MAXNPC];
+    int hikerMap[ROWS][COLUMNS];
+    int rivalMap[ROWS][COLUMNS];
     int nmbOfNPCs;
     int x;
     int y;
@@ -62,6 +66,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
+void HikerMove(int worldX, int worldY, NPCs *currNPC);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
@@ -94,7 +99,7 @@ char* WATER = CYAN "~" RESET;
 char* CNTR = MAGENTA "C" RESET;
 char* PKMART = MAGENTA "M" RESET;
 
-char* PC = WHITE "@" RESET;
+char* PC = RESET "@" RESET;
 char* HIKER = BLDRED "h" RESET;
 char* RIVAL = BLDRED "r" RESET;
 char* PACER = BLDRED "p" RESET;
@@ -121,18 +126,17 @@ struct map *worldMap[WORLDROWS][WORLDCOLUMNS];
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    int numTrainers = 10; 
-    int i;
+    int numTrainers = 1;//10; 
 
     // --numtrainers switch
-    for (i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--numtrainers") == 0) {
             if (i + 1 < argc) {
                 numTrainers = atoi(argv[i + 1]); 
-                if (numTrainers > 100) {
+                if (numTrainers > MAXNPC) {
                     system("clear");
-                    printf("The max number of npcs is 100. (Why would you want that many anyway!?)");
-                    printf("\nProgram closed.");
+                    printf("The max number of npcs is %d. (Why would you want that many anyway!?)", MAXNPC);
+                    printf("\nProgram closed.\n");
                     return 1;
                 }
             } else {
@@ -163,7 +167,7 @@ int main(int argc, char *argv[]) {
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
-    struct map currentMap = *worldMap[x][y];
+    // struct map currentMap = *worldMap[x][y];
 
     //Start movement 
     char command = 'c';
@@ -171,7 +175,26 @@ int main(int argc, char *argv[]) {
         system("clear");
         PrintMap(x, y);
 
-        Dijkstra(&currentMap, hikerNPC, Player->x, Player->y);
+        Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
+
+        // for (int i = 0; i < ROWS; i++) {
+        //     for (int j = 0; j < COLUMNS; j++) {
+        //         if (worldMap[x][y]->hikerMap[i][j] == SHRT_MAX) {
+        //             printf("   ");
+        //             continue;
+        //         }
+        //         if (i == Player->x && j == Player->y) {
+        //             printf("%s%2d%s ", GREEN, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
+        //             continue;
+        //         }
+        //         // if (i == worldMap[x][y]->npcs[0].x && j == worldMap[x][y]->npcs[0].y) {
+        //         //     printf("%s%2d%s ", BLDRED, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
+        //         //     continue;
+        //         // }
+        //         printf("%2d ", worldMap[x][y]->hikerMap[i][j] % 100);
+        //     }
+        //     printf("\n");
+        // }
 
         printf("What would you like to do next? Type i to see available options.\n");
         scanf(" %c", &command);
@@ -183,7 +206,7 @@ int main(int argc, char *argv[]) {
                 "s: Move to the map immediately south of the current map and display it.\n"
                 "e: Move to the map immediately east of the current map and display it.\n"
                 "w: Move to the map immediately west of the current map and display it.\n"
-                "f x y: x and y are integers; Fly2 to map (x, y) and display it.\n"
+                "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
                 "q: Quit the game.\n");
             printf("\nType c to continue: ");
             while (command != 'c') scanf("%c", &command);
@@ -195,7 +218,7 @@ int main(int argc, char *argv[]) {
             if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
             if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
 
-            currentMap = GenerateMap(x, y);
+            GenerateMap(x, y);
             continue;
         }
         if (command == 'f') {
@@ -209,7 +232,16 @@ int main(int argc, char *argv[]) {
                 y = oldY;
                 continue;
             }
-            currentMap = GenerateMap(x, y);
+            GenerateMap(x, y);
+        }
+        if (command == 'm') {
+            while (1) {
+                HikerMove(x, y, &worldMap[x][y]->npcs[0]);
+                PrintMap(x, y);
+                usleep(250000);
+                system("clear");
+            }
+            continue;
         }
     }
 
@@ -217,6 +249,27 @@ int main(int argc, char *argv[]) {
     DeleteWorld();
 
     return 0;
+}
+
+void HikerMove(int worldX, int worldY, NPCs *currNPC) {
+    int nextX = currNPC->x;
+    int nextY = currNPC->y;
+    struct map currMap = *worldMap[worldX][worldY];
+
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            //Ignore center
+            if (i == 0 && j == 0) continue;
+            //Check area if there is a smaller weight and move to it. 
+            if (currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
+                nextX = currNPC->x + i;
+                nextY = currNPC->y + j;
+            }
+        }
+    }
+
+    currNPC->x = nextX;
+    currNPC->y = nextY;
 }
 
 void SpawnNPCs(int number, int worldX, int worldY) {
@@ -244,6 +297,11 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.type = npcList[i];
         currNPC.x = rand() % (ROWS - 2) + 1;
         currNPC.y = rand() % (COLUMNS - 2) + 1;
+
+        if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER)) {
+            i--;
+            continue;
+        }
 
         currentMap->npcs[i] = currNPC;
     }
@@ -488,6 +546,7 @@ struct map GenerateMap(int x, int y) {
     newMap.southEnt = southEnt;
     newMap.westEnt = westEnt;
     newMap.eastEnt = eastEnt;
+    newMap.nmbOfNPCs = 0;
 
     worldMap[x][y] = malloc(sizeof(struct map));
     if (worldMap[x][y] != NULL) {
@@ -662,7 +721,22 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
         }
     }
 
-    // Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
+    // Add cost maps to map struct
+    if (npcType == hikerNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                map->hikerMap[i][j] = npcPath[i][j].cost;
+            }
+        }
+    } else if (npcType == rivalNPC) {
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLUMNS; j++) {
+                map->rivalMap[i][j] = npcPath[i][j].cost;
+            }
+        }
+    }
+
+    //Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
     // for (int i = 0; i < ROWS; i++){
     //     for (int j = 0; j < COLUMNS; j++){
     //         if(npcPath[i][j].cost == SHRT_MAX){
