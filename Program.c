@@ -1,7 +1,7 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.03
+Version: 1.04
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,7 +66,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
-void HikerMove(int worldX, int worldY, NPCs *currNPC);
+void CostMapMove(int worldX, int worldY, NPCs *currNPC);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
@@ -126,7 +126,7 @@ struct map *worldMap[WORLDROWS][WORLDCOLUMNS];
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    int numTrainers = 1;//10; 
+    int numTrainers = 2;//10; 
 
     // --numtrainers switch
     for (int i = 1; i < argc; i++) {
@@ -176,6 +176,7 @@ int main(int argc, char *argv[]) {
         PrintMap(x, y);
 
         Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
+        Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
         // for (int i = 0; i < ROWS; i++) {
         //     for (int j = 0; j < COLUMNS; j++) {
@@ -236,7 +237,8 @@ int main(int argc, char *argv[]) {
         }
         if (command == 'm') {
             while (1) {
-                HikerMove(x, y, &worldMap[x][y]->npcs[0]);
+                CostMapMove(x, y, &worldMap[x][y]->npcs[0]);
+                CostMapMove(x, y, &worldMap[x][y]->npcs[1]);
                 PrintMap(x, y);
                 usleep(250000);
                 system("clear");
@@ -251,7 +253,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void HikerMove(int worldX, int worldY, NPCs *currNPC) {
+void CostMapMove(int worldX, int worldY, NPCs *currNPC) {
     int nextX = currNPC->x;
     int nextY = currNPC->y;
     struct map currMap = *worldMap[worldX][worldY];
@@ -261,7 +263,10 @@ void HikerMove(int worldX, int worldY, NPCs *currNPC) {
             //Ignore center
             if (i == 0 && j == 0) continue;
             //Check area if there is a smaller weight and move to it. 
-            if (currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
+            if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
+                nextX = currNPC->x + i;
+                nextY = currNPC->y + j;
+            } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]) {
                 nextX = currNPC->x + i;
                 nextY = currNPC->y + j;
             }
@@ -622,6 +627,7 @@ char* FindTerrain() {
 }
 
 void DeleteWorld() {
+    free(Player);
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
             free(worldMap[i][j]);
