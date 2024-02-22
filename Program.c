@@ -260,7 +260,6 @@ int main(int argc, char *argv[]) {
 
 void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
     if (currNPC->type == hikerNPC || currNPC->type == rivalNPC) {
-
         int nextX = currNPC->x;
         int nextY = currNPC->y;
         struct map currMap = *worldMap[worldX][worldY];
@@ -285,7 +284,6 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         currNPC->y = nextY;
     } 
     else if (currNPC->type == pacerNPC) {
-
         // If never moved. Find movement direciton and destination x and y.
         while (currNPC->dirX == 0 && currNPC->dirY == 0) {
             // Rand int -1, 0, or 1
@@ -307,6 +305,24 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         }
     } 
     else if (currNPC->type == wandererNPC) {
+        //Wanderes never leave their terrain
+        char *currTer = worldMap[worldX][worldY]->map[currNPC->x][currNPC->y];
+        //Find direction
+        while (currNPC->dirX == 0 && currNPC->dirY == 0) {
+            currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+            currNPC->dirY = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+        }
+
+        int nextX = currNPC->x + currNPC->dirX;
+        int nextY = currNPC->y + currNPC->dirY;
+        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (!strcmp(currTer, nextTer)) {
+            currNPC->x = nextX;
+            currNPC->y = nextY;
+        } else {
+            currNPC->dirX = 0;
+            currNPC->dirY = 0;
+        }
     } 
     else if (currNPC->type == explorerNPC) {
     }
