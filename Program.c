@@ -68,8 +68,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
-void PacerMove(int worldX, int worldY, NPCs *currNPC);
-void CostMapMove(int worldX, int worldY, NPCs *currNPC);
+void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
@@ -129,7 +128,7 @@ struct map *worldMap[WORLDROWS][WORLDCOLUMNS];
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    int numTrainers = 1;//10; 
+    int numTrainers = 10; 
 
     // --numtrainers switch
     for (int i = 1; i < argc; i++) {
@@ -242,9 +241,9 @@ int main(int argc, char *argv[]) {
         }
         if (command == 'm') {
             while (1) {
-                PacerMove(x, y, &worldMap[x][y]->npcs[0]);
-                // CostMapMove(x, y, &worldMap[x][y]->npcs[0]);
-                // CostMapMove(x, y, &worldMap[x][y]->npcs[1]);
+                for (int i = 0; i < numTrainers; i++) {
+                    MoveNPC(x, y, &worldMap[x][y]->npcs[i]);
+                }
                 PrintMap(x, y);
                 usleep(250000);
                 system("clear");
@@ -259,50 +258,58 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void PacerMove(int worldX, int worldY, NPCs *currNPC) {
-    //If never moved. Find movement direciton and destination x and y. 
-    while (currNPC->dirX == 0 && currNPC->dirY == 0) {
-        //Rand int -1, 0, or 1
-        currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
-        currNPC->dirY = (int)(((double)rand() / RAND_MAX) * 3) - 1;
-    }
+void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
+    if (currNPC->type == hikerNPC || currNPC->type == rivalNPC) {
 
-    int nextX = currNPC->x + currNPC->dirX;
-    int nextY = currNPC->y + currNPC->dirY;
-    char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-    //If can continue walking, continue
-    //Else, go back
-    if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)) {
-        currNPC->x = nextX;
-        currNPC->y = nextY;
-    } else {
-        currNPC->dirX = -currNPC->dirX;
-        currNPC->dirY = -currNPC->dirY;
-    }
-}
+        int nextX = currNPC->x;
+        int nextY = currNPC->y;
+        struct map currMap = *worldMap[worldX][worldY];
 
-void CostMapMove(int worldX, int worldY, NPCs *currNPC) {
-    int nextX = currNPC->x;
-    int nextY = currNPC->y;
-    struct map currMap = *worldMap[worldX][worldY];
-
-    for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-            //Ignore center
-            if (i == 0 && j == 0) continue;
-            //Check area if there is a smaller weight and move to it. 
-            if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
-                nextX = currNPC->x + i;
-                nextY = currNPC->y + j;
-            } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]) {
-                nextX = currNPC->x + i;
-                nextY = currNPC->y + j;
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                // Ignore center
+                if (i == 0 && j == 0)
+                    continue;
+                // Check area if there is a smaller weight and move to it.
+                if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
+                    nextX = currNPC->x + i;
+                    nextY = currNPC->y + j;
+                } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]) {
+                    nextX = currNPC->x + i;
+                    nextY = currNPC->y + j;
+                }
             }
         }
-    }
 
-    currNPC->x = nextX;
-    currNPC->y = nextY;
+        currNPC->x = nextX;
+        currNPC->y = nextY;
+    } 
+    else if (currNPC->type == pacerNPC) {
+
+        // If never moved. Find movement direciton and destination x and y.
+        while (currNPC->dirX == 0 && currNPC->dirY == 0) {
+            // Rand int -1, 0, or 1
+            currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+            currNPC->dirY = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+        }
+
+        int nextX = currNPC->x + currNPC->dirX;
+        int nextY = currNPC->y + currNPC->dirY;
+        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        // If can continue walking, continue
+        // Else, go back
+        if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)) {
+            currNPC->x = nextX;
+            currNPC->y = nextY;
+        } else {
+            currNPC->dirX = -currNPC->dirX;
+            currNPC->dirY = -currNPC->dirY;
+        }
+    } 
+    else if (currNPC->type == wandererNPC) {
+    } 
+    else if (currNPC->type == explorerNPC) {
+    }
 }
 
 void SpawnNPCs(int number, int worldX, int worldY) {
@@ -313,7 +320,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
     for (int i = 0; i < number; i++) {
         //Guarantees first two are hiker and rival
         if (i == 0) {
-            npcList[i] = pacerNPC;//hikerNPC;
+            npcList[i] = hikerNPC;
             continue;
         } else if (i == 1) {
             npcList[i] = rivalNPC;
