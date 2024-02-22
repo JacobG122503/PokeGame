@@ -33,6 +33,8 @@ typedef enum {
 typedef struct NPCs {
     int x;
     int y;
+    int dirX; 
+    int dirY;
     npc type;
 } NPCs;
 
@@ -66,6 +68,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
+void PacerMove(int worldX, int worldY, NPCs *currNPC);
 void CostMapMove(int worldX, int worldY, NPCs *currNPC);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
@@ -126,7 +129,7 @@ struct map *worldMap[WORLDROWS][WORLDCOLUMNS];
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
-    int numTrainers = 2;//10; 
+    int numTrainers = 1;//10; 
 
     // --numtrainers switch
     for (int i = 1; i < argc; i++) {
@@ -147,6 +150,9 @@ int main(int argc, char *argv[]) {
     }
 
     //Make seed and save into seeds.txt
+    //Odd seeds
+    //1708631599 - Endless loop, cant place buildings
+    //1708632100 - Buildings overlap
     time_t seed = time(NULL);
     srand(seed); 
     FILE *seedFile;
@@ -167,7 +173,6 @@ int main(int argc, char *argv[]) {
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
-    // struct map currentMap = *worldMap[x][y];
 
     //Start movement 
     char command = 'c';
@@ -237,8 +242,9 @@ int main(int argc, char *argv[]) {
         }
         if (command == 'm') {
             while (1) {
-                CostMapMove(x, y, &worldMap[x][y]->npcs[0]);
-                CostMapMove(x, y, &worldMap[x][y]->npcs[1]);
+                PacerMove(x, y, &worldMap[x][y]->npcs[0]);
+                // CostMapMove(x, y, &worldMap[x][y]->npcs[0]);
+                // CostMapMove(x, y, &worldMap[x][y]->npcs[1]);
                 PrintMap(x, y);
                 usleep(250000);
                 system("clear");
@@ -251,6 +257,28 @@ int main(int argc, char *argv[]) {
     DeleteWorld();
 
     return 0;
+}
+
+void PacerMove(int worldX, int worldY, NPCs *currNPC) {
+    //If never moved. Find movement direciton and destination x and y. 
+    while (currNPC->dirX == 0 && currNPC->dirY == 0) {
+        //Rand int -1, 0, or 1
+        currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+        currNPC->dirY = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+    }
+
+    int nextX = currNPC->x + currNPC->dirX;
+    int nextY = currNPC->y + currNPC->dirY;
+    char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+    //If can continue walking, continue
+    //Else, go back
+    if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)) {
+        currNPC->x = nextX;
+        currNPC->y = nextY;
+    } else {
+        currNPC->dirX = -currNPC->dirX;
+        currNPC->dirY = -currNPC->dirY;
+    }
 }
 
 void CostMapMove(int worldX, int worldY, NPCs *currNPC) {
@@ -285,7 +313,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
     for (int i = 0; i < number; i++) {
         //Guarantees first two are hiker and rival
         if (i == 0) {
-            npcList[i] = hikerNPC;
+            npcList[i] = pacerNPC;//hikerNPC;
             continue;
         } else if (i == 1) {
             npcList[i] = rivalNPC;
@@ -302,8 +330,10 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.type = npcList[i];
         currNPC.x = rand() % (ROWS - 2) + 1;
         currNPC.y = rand() % (COLUMNS - 2) + 1;
+        currNPC.dirX = 0;
+        currNPC.dirY= 0;
 
-        if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER)) {
+        if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
             i--;
             continue;
         }
