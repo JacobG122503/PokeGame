@@ -35,6 +35,7 @@ typedef struct NPCs {
     int y;
     int dirX; 
     int dirY;
+    int turnTime;
     npc type;
 } NPCs;
 
@@ -43,6 +44,7 @@ struct map {
     int hikerWeights[ROWS][COLUMNS];
     int othersWeights[ROWS][COLUMNS];
     NPCs npcs[MAXNPC];
+    heap_t turns;
     int hikerMap[ROWS][COLUMNS];
     int rivalMap[ROWS][COLUMNS];
     int nmbOfNPCs;
@@ -69,6 +71,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
+void NextTurn(int worldX, int worldY);
 void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
 void SpawnNPCs(int number, int worldX, int worldY);
@@ -78,6 +81,7 @@ void PrintMap(int worldX, int worldY);
 char* FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
+static int32_t npc_turn_cmp(const void *key, const void *with);
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
 //Colors
@@ -243,11 +247,9 @@ int main(int argc, char *argv[]) {
         }
         if (command == 'm') {
             while (1) {
-                for (int i = 0; i < numTrainers; i++) {
-                    MoveNPC(x, y, &worldMap[x][y]->npcs[i]);
-                }
+                NextTurn(x, y);
                 PrintMap(x, y);
-                usleep(250000);
+                usleep(40000);
                 system("clear");
             }
             continue;
@@ -258,6 +260,13 @@ int main(int argc, char *argv[]) {
     DeleteWorld();
 
     return 0;
+}
+
+void NextTurn(int worldX, int worldY) {
+    NPCs *nextNPC = heap_remove_min(&worldMap[worldX][worldY]->turns);
+    MoveNPC(worldX, worldY, nextNPC);
+    
+    heap_insert(&worldMap[worldX][worldY]->turns, nextNPC);
 }
 
 void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
@@ -286,6 +295,13 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         currNPC->x = nextX;
         currNPC->y = nextY;
+
+        //Add time to npc
+        if (currNPC->type == hikerNPC) {
+            currNPC->turnTime += currMap.hikerWeights[nextX][nextY];
+        } else if (currNPC->type == rivalNPC) {
+            currNPC->turnTime += currMap.othersWeights[nextX][nextY];
+        }
     } 
     else if (currNPC->type == pacerNPC) {
         // If never moved. Find movement direciton and destination x and y.
@@ -304,6 +320,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[nextX][nextY];
         } else {
             currNPC->dirX = -currNPC->dirX;
             currNPC->dirY = -currNPC->dirY;
@@ -325,6 +342,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[nextX][nextY];
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
@@ -344,10 +362,14 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[nextX][nextY];
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
         }
+    }
+    else if (currNPC->type == sentryNPC) {
+        currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
     }
 }
 
@@ -375,6 +397,9 @@ int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
 
 void SpawnNPCs(int number, int worldX, int worldY) {
     struct map *currentMap = worldMap[worldX][worldY];
+
+    heap_init(&currentMap->turns, npc_turn_cmp, NULL);
+
     currentMap->nmbOfNPCs = number;
     npc npcList[number];
 
@@ -400,6 +425,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.y = rand() % (COLUMNS - 2) + 1;
         currNPC.dirX = 0;
         currNPC.dirY= 0;
+        currNPC.turnTime = 0;
 
         if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
             i--;
@@ -407,7 +433,10 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         }
 
         currentMap->npcs[i] = currNPC;
+        heap_insert(&currentMap->turns, &currentMap->npcs[i]);
     }
+
+
 }
 
 void PlacePC(int worldX, int worldY) {
@@ -652,7 +681,7 @@ struct map GenerateMap(int x, int y) {
     newMap.nmbOfNPCs = 0;
 
     // Initialize terrain weights
-    //Hiker weights
+    // Hiker weights
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
             char *terrain = newMap.map[i][j];
@@ -768,8 +797,12 @@ void DeleteWorld() {
     }
 }
 
-static int32_t path_cmp(const void *key, const void *with){
+static int32_t path_cmp(const void *key, const void *with) {
   return ((path *) key)->cost - ((path *) with)->cost;
+}
+
+static int32_t npc_turn_cmp(const void *key, const void *with) {
+  return ((NPCs *) key)->turnTime - ((NPCs *) with)->turnTime;
 }
 
 /*
