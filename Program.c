@@ -40,7 +40,8 @@ typedef struct NPCs {
 
 struct map {
     char* map[ROWS][COLUMNS];
-    int weights[ROWS][COLUMNS];
+    int hikerWeights[ROWS][COLUMNS];
+    int othersWeights[ROWS][COLUMNS];
     NPCs npcs[MAXNPC];
     int hikerMap[ROWS][COLUMNS];
     int rivalMap[ROWS][COLUMNS];
@@ -69,6 +70,7 @@ typedef struct PlayerChar {
 
 //Prototypes
 void MoveNPC(int worldX, int worldY, NPCs *currNPC);
+int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
@@ -152,7 +154,8 @@ int main(int argc, char *argv[]) {
     //Odd seeds
     //1708631599 - Endless loop, cant place buildings
     //1708632100 - Buildings overlap
-    time_t seed = 1708698665;//time(NULL);
+    //1708700270 - seg fault
+    time_t seed = 1708700270;//time(NULL);
     srand(seed); 
     FILE *seedFile;
     seedFile = fopen("seeds.txt", "a");
@@ -270,10 +273,12 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
                 if (i == 0 && j == 0)
                     continue;
                 // Check area if there is a smaller weight and move to it.
-                if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]) {
+                if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]
+                    && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
                     nextX = currNPC->x + i;
                     nextY = currNPC->y + j;
-                } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]) {
+                } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]
+                    && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
                     nextX = currNPC->x + i;
                     nextY = currNPC->y + j;
                 }
@@ -296,7 +301,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
         // If can continue walking, continue
         // Else, go back
-        if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)) {
+        if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)
+            && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
         } else {
@@ -316,7 +322,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
         char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (!strcmp(currTer, nextTer)) {
+        if (!strcmp(currTer, nextTer)
+            && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
         } else {
@@ -334,7 +341,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
         char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (strcmp(nextTer, WATER) && strcmp(nextTer, MTN) && strcmp(nextTer, TREE)) {
+        if (strcmp(nextTer, WATER) && strcmp(nextTer, MTN) && strcmp(nextTer, TREE)
+            && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
         } else {
@@ -342,6 +350,20 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
             currNPC->dirY = 0;
         }
     }
+}
+
+int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
+    struct map currMap = *worldMap[worldX][worldY];
+
+    //Check if next spot is gate
+    if ((nextX == 0 && nextY == currMap.northEnt) ||
+        (nextX == ROWS - 1 && nextY == currMap.southEnt) ||
+        (nextX == currMap.westEnt && nextY == 0) ||
+        (nextX == currMap.eastEnt && nextY == COLUMNS - 1)) {
+            return 0;
+        }
+    
+    return 1;
 }
 
 void SpawnNPCs(int number, int worldX, int worldY) {
@@ -622,6 +644,40 @@ struct map GenerateMap(int x, int y) {
     newMap.eastEnt = eastEnt;
     newMap.nmbOfNPCs = 0;
 
+    // Initialize terrain weights
+    //Hiker weights
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLUMNS; j++) {
+            char *terrain = newMap.map[i][j];
+
+            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                newMap.hikerWeights[i][j] = 10;
+            } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
+                newMap.hikerWeights[i][j] = 15;
+            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                newMap.hikerWeights[i][j] = 50;
+            } else {
+                newMap.hikerWeights[i][j] = SHRT_MAX;
+            }
+        }
+    }
+    //Rival and Other weights
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLUMNS; j++) {
+            char *terrain = newMap.map[i][j];
+
+            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+                newMap.othersWeights[i][j] = 10;
+            } else if (!strcmp(terrain, LNGR)) {
+                newMap.othersWeights[i][j] = 20;
+            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+                newMap.othersWeights[i][j] = 50;
+            } else {
+                newMap.othersWeights[i][j] = SHRT_MAX;
+            }
+        }
+    }
+
     worldMap[x][y] = malloc(sizeof(struct map));
     if (worldMap[x][y] != NULL) {
         memcpy(worldMap[x][y], &newMap, sizeof(struct map));
@@ -716,38 +772,17 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     path npcPath[ROWS][COLUMNS], *npcP;
     heap_t h;
 
-    //Initialize terrain weights
+    int weights[ROWS][COLUMNS];
     if (npcType == hikerNPC) {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
-                char *terrain = map->map[i][j];
-
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
-                    map->weights[i][j] = 10;
-                } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
-                    map->weights[i][j] = 15;
-                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
-                    map->weights[i][j] = 50;
-                } else {
-                    map->weights[i][j] = SHRT_MAX;
-                }
+                weights[i][j] = map->hikerWeights[i][j];
             }
         }
-    } 
-    else if (npcType == rivalNPC) {
+    } else {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
-                char *terrain = map->map[i][j];
-
-                if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
-                    map->weights[i][j] = 10;
-                } else if (!strcmp(terrain, LNGR)) {
-                    map->weights[i][j] = 20;
-                } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
-                    map->weights[i][j] = 50;
-                } else {
-                    map->weights[i][j] = SHRT_MAX;
-                }
+                weights[i][j] = map->othersWeights[i][j];
             }
         }
     }
@@ -769,7 +804,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     //Go through and insert into heap if not infinity
     for(int i = 1; i < ROWS - 1; i++){
         for(int j = 1; j < COLUMNS - 1; j++){
-            if(map->weights[i][j] != SHRT_MAX){
+            if(weights[i][j] != SHRT_MAX){
                 npcPath[i][j].hn = heap_insert(&h, &npcPath[i][j]);
             }
         }
@@ -785,7 +820,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
                 if (npcP->x + i > ROWS - 1 || npcP->y + j > COLUMNS - 1) continue;
                 if (npcP->x > ROWS - 1 || npcP->y > COLUMNS - 1) continue;
                 path current = npcPath[npcP->x + i][npcP->y + j]; 
-                int centerWeight = map->weights[npcP->x][npcP->y];
+                int centerWeight = weights[npcP->x][npcP->y];
                 if (!(i == 0 && j == 0) && 
                     (current.hn) && 
                     (current.cost > ((npcP->cost + centerWeight)))) {
