@@ -154,8 +154,7 @@ int main(int argc, char *argv[]) {
     //Odd seeds
     //1708631599 - Endless loop, cant place buildings
     //1708632100 - Buildings overlap
-    //1708700270 - seg fault
-    time_t seed = 1708700270;//time(NULL);
+    time_t seed = time(NULL);
     srand(seed); 
     FILE *seedFile;
     seedFile = fopen("seeds.txt", "a");
@@ -274,11 +273,11 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
                     continue;
                 // Check area if there is a smaller weight and move to it.
                 if (currNPC->type == hikerNPC && currMap.hikerMap[currNPC->x + i][currNPC->y + j] < currMap.hikerMap[nextX][nextY]
-                    && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
+                    && MoveNPC_CheckValid(worldX, worldY, nextX + i, nextY + j)) {
                     nextX = currNPC->x + i;
                     nextY = currNPC->y + j;
                 } else if (currNPC->type == rivalNPC && currMap.rivalMap[currNPC->x + i][currNPC->y + j] < currMap.rivalMap[nextX][nextY]
-                    && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
+                    && MoveNPC_CheckValid(worldX, worldY, nextX + i, nextY + j)) {
                     nextX = currNPC->x + i;
                     nextY = currNPC->y + j;
                 }
@@ -355,14 +354,22 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
     struct map currMap = *worldMap[worldX][worldY];
 
-    //Check if next spot is gate
+    // Check if next spot is gate
     if ((nextX == 0 && nextY == currMap.northEnt) ||
         (nextX == ROWS - 1 && nextY == currMap.southEnt) ||
         (nextX == currMap.westEnt && nextY == 0) ||
         (nextX == currMap.eastEnt && nextY == COLUMNS - 1)) {
-            return 0;
-        }
-    
+        return 0;
+    }
+
+    //Check if next spot has an NPC there already
+    for (int i = 0; i < currMap.nmbOfNPCs; i++) {
+        if (currMap.npcs[i].x == nextX &&
+            currMap.npcs[i].y == nextY) {
+                return 0;
+            }
+    }
+
     return 1;
 }
 
