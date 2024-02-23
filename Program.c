@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
     //Odd seeds
     //1708631599 - Endless loop, cant place buildings
     //1708632100 - Buildings overlap
-    time_t seed = time(NULL);
+    time_t seed = 1708698665;//time(NULL);
     srand(seed); 
     FILE *seedFile;
     seedFile = fopen("seeds.txt", "a");
@@ -325,6 +325,22 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         }
     } 
     else if (currNPC->type == explorerNPC) {
+        //Find direction
+        while (currNPC->dirX == 0 && currNPC->dirY == 0) {
+            currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+            currNPC->dirY = (int)(((double)rand() / RAND_MAX) * 3) - 1;
+        }
+
+        int nextX = currNPC->x + currNPC->dirX;
+        int nextY = currNPC->y + currNPC->dirY;
+        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (strcmp(nextTer, WATER) && strcmp(nextTer, MTN) && strcmp(nextTer, TREE)) {
+            currNPC->x = nextX;
+            currNPC->y = nextY;
+        } else {
+            currNPC->dirX = 0;
+            currNPC->dirY = 0;
+        }
     }
 }
 
