@@ -1,14 +1,15 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.04
+Version: 1.05
 */
+#include <limits.h>
+#include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include <limits.h>
- #include <unistd.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "heap.h"
 
@@ -84,51 +85,23 @@ static int32_t path_cmp(const void *key, const void *with);
 static int32_t npc_turn_cmp(const void *key, const void *with);
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
-//Colors
-#define BLACK   "\x1b[30m"
-#define RED     "\x1b[31m"
-#define BLDRED  "\e[1;31m"
-#define GREEN   "\x1b[32m"
-#define YELLOW  "\x1b[33m"
-#define PURPLE  "\033[0;34m"
-#define MAGENTA "\x1b[35m"
-#define CYAN    "\x1b[36m"
-#define WHITE   "\x1b[37m"
-#define RESET   "\x1b[0m"
-#define GREY    "\x1b[90m"
-
 //Elements and Characters
-char* MTN = GREY "%" RESET;
-char* TREE = GREY "^" RESET;
-char* ROAD = YELLOW "#" RESET;
-char* LNGR = GREEN ":" RESET;
-char* CLRNG = GREEN "." RESET;
-char* WATER = CYAN "~" RESET;
-char* CNTR = MAGENTA "C" RESET;
-char* PKMART = MAGENTA "M" RESET;
+char* MTN = "%";
+char* TREE = "^";
+char* ROAD = "#";
+char* LNGR = ":";
+char* CLRNG = ".";
+char* WATER = "~";
+char* CNTR = "C";
+char* PKMART = "M";
 
-char* PC = RESET "@" RESET;
-char* HIKER = BLDRED "h" RESET;
-char* RIVAL = BLDRED "r" RESET;
-char* PACER = BLDRED "p" RESET;
-char* WANDERER = BLDRED "w" RESET;
-char* SENTRY = BLDRED "s" RESET;
-char* EXPLORER = BLDRED "e" RESET;
-
-// • Hikers: These will be represented by the letter ’h’. Hikers path to the PC by following a maximum
-// gradient on the hiker map.
-// • Rivals: These will be represented by the letter ’r’. Rivals path to the PC by following a maximum
-// gradient on the rival map.
-// • Pacers: These will be represented by the letter ’p’. Pacers start with a direction and walk until they
-// hit some terrain they cannot traverse, then they turn around and repeat, pacing back and forth.
-// • Wanderers: These will be represented by the letter ’w’. Wanderers never leave the terrain region they
-// were spawned in. They have a direction and walk strait ahead to the edge of the terrain, whereupon
-// they turn in a random direction and repeat.
-// • Sentries: These will be represented by the letter ’s’. Sentries don’t move; they just wait for the action
-// to come to them.
-// • Explorers: These will be represented by the letter ’e’. Explorers move like wanderers, but they cross
-// terrain type boundaries, only changing to a new, random direction when they reach an impassable
-// terrain element
+char* PC = "@";
+char* HIKER = "h";
+char* RIVAL = "r";
+char* PACER = "p";
+char* WANDERER = "w";
+char* SENTRY = "s";
+char* EXPLORER = "e";
 
 struct map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
 PlayerChar *Player;
@@ -142,13 +115,13 @@ int main(int argc, char *argv[]) {
             if (i + 1 < argc) {
                 numTrainers = atoi(argv[i + 1]); 
                 if (numTrainers > MAXNPC) {
-                    system("clear");
-                    printf("The max number of npcs is %d. (Why would you want that many anyway!?)", MAXNPC);
-                    printf("\nProgram closed.\n");
+                    
+                    printw("The max number of npcs is %d. (Why would you want that many anyway!?)", MAXNPC);
+                    printw("\nProgram closed.\n");
                     return 1;
                 }
             } else {
-                printf("Error: --numtrainers switch requires an argument.\n");
+                printw("Error: --numtrainers switch requires an argument.\n");
                 return 1;
             }
         }
@@ -179,48 +152,35 @@ int main(int argc, char *argv[]) {
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
 
+    initscr();
+    raw(); 
+    noecho();
+    curs_set(0);
+
     //Start movement 
     char command = 'c';
     while (command != 'q') {
-        system("clear");
         PrintMap(x, y);
+        refresh();
 
         Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
-        // for (int i = 0; i < ROWS; i++) {
-        //     for (int j = 0; j < COLUMNS; j++) {
-        //         if (worldMap[x][y]->hikerMap[i][j] == SHRT_MAX) {
-        //             printf("   ");
-        //             continue;
-        //         }
-        //         if (i == Player->x && j == Player->y) {
-        //             printf("%s%2d%s ", GREEN, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
-        //             continue;
-        //         }
-        //         // if (i == worldMap[x][y]->npcs[0].x && j == worldMap[x][y]->npcs[0].y) {
-        //         //     printf("%s%2d%s ", BLDRED, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
-        //         //     continue;
-        //         // }
-        //         printf("%2d ", worldMap[x][y]->hikerMap[i][j] % 100);
-        //     }
-        //     printf("\n");
-        // }
-
-        printf("What would you like to do next? Type i to see available options.\n");
-        scanf(" %c", &command);
+        //printw("What would you like to do next? Type i to see available options.\n");
+        command = getchar();
+        
         //Instructions
         if (command == 'i') {
-            system("clear");
-            printf("%sCOMMAND LIST%s\n", GREEN, RESET);
-            printf("n: Move to the map immediately north of the current map and display it.\n"
+            printw("%sCOMMAND LIST%s\n","green", "reset");
+            printw("n: Move to the map immediately north of the current map and display it.\n"
                 "s: Move to the map immediately south of the current map and display it.\n"
                 "e: Move to the map immediately east of the current map and display it.\n"
                 "w: Move to the map immediately west of the current map and display it.\n"
                 "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
                 "q: Quit the game.\n");
-            printf("\nType c to continue: ");
-            while (command != 'c') scanf("%c", &command);
+            printw("\nType c to continue: ");
+            refresh();
+            while (command != 'c') command = getchar();
             continue;
         }
         if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
@@ -232,32 +192,35 @@ int main(int argc, char *argv[]) {
             GenerateMap(x, y);
             continue;
         }
-        if (command == 'f') {
-            int oldX = x;
-            int oldY = y;
-            scanf(" %d %d", &x, &y);
-            x += 200;
-            y += 200;
-            if (x > 400 || y > 400 || x < 0 || y < 0) {
-                x = oldX;
-                y = oldY;
-                continue;
-            }
-            GenerateMap(x, y);
-        }
+        // if (command == 'f') {
+        //     int oldX = x;
+        //     int oldY = y;
+        //     scanf(" %d %d", &x, &y);
+        //     x += 200;
+        //     y += 200;
+        //     if (x > 400 || y > 400 || x < 0 || y < 0) {
+        //         x = oldX;
+        //         y = oldY;
+        //         continue;
+        //     }
+        //     GenerateMap(x, y);
+        // }
         if (command == 'm') {
             while (1) {
                 NextTurn(x, y);
                 PrintMap(x, y);
                 usleep(40000);
-                system("clear");
+                
+                refresh();
             }
             continue;
         }
     }
 
-    printf("Closing game...\n");
+    printw("Closing game...\n");
+    refresh();
     DeleteWorld();
+    endwin();
 
     return 0;
 }
@@ -753,8 +716,8 @@ void PrintMap(int worldX, int worldY) {
             nextNPC = EXPLORER;
             break;
         default:
-            system("clear");
-            printf("Error generating and printing npcs");
+            
+            printw("Error generating and printing npcs");
             exit(0);
         }
 
@@ -764,11 +727,11 @@ void PrintMap(int worldX, int worldY) {
     //Print map
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            printf("%s", currMap.map[i][j]);
+            printw("%s", currMap.map[i][j]);
         }
-        printf("\n");
+        printw("\n");
     }
-    printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
+    printw("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
 char* FindTerrain() {
@@ -805,9 +768,6 @@ static int32_t npc_turn_cmp(const void *key, const void *with) {
   return ((NPCs *) key)->turnTime - ((NPCs *) with)->turnTime;
 }
 
-/*
-Credit Geeks for Geeks for inspiration/structure
-*/
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     path npcPath[ROWS][COLUMNS], *npcP;
     heap_t h;
@@ -890,16 +850,16 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     // for (int i = 0; i < ROWS; i++){
     //     for (int j = 0; j < COLUMNS; j++){
     //         if(npcPath[i][j].cost == SHRT_MAX){
-    //             printf("   ");
+    //             printw("   ");
     //             continue;
     //         }
     //         if (i == playerX && j == playerY) {
-    //             printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
+    //             printw("%s%2d%s ",, npcPath[i][j].cost % 100,);
     //             continue;
     //         }
-    //         printf("%2d ", npcPath[i][j].cost % 100);
+    //         printw("%2d ", npcPath[i][j].cost % 100);
     //     }
-    //     printf("\n");
+    //     printw("\n");
     // }
     
 }
