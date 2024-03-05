@@ -72,6 +72,7 @@ typedef struct PlayerChar {
 } PlayerChar;
 
 //Prototypes
+void SetupColors();
 void NextTurn(int worldX, int worldY);
 void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
@@ -156,7 +157,8 @@ int main(int argc, char *argv[]) {
     raw(); 
     noecho();
     curs_set(0);
-
+    SetupColors();
+    
     //Start movement 
     char command = 'c';
     while (command != 'q') {
@@ -210,9 +212,9 @@ int main(int argc, char *argv[]) {
             while (1) {
                 NextTurn(x, y);
                 PrintMap(x, y);
-                usleep(40000);
-                
                 refresh();
+                usleep(40000);
+                clear();
             }
             continue;
         }
@@ -224,6 +226,17 @@ int main(int argc, char *argv[]) {
     endwin();
 
     return 0;
+}
+
+void SetupColors() {
+    start_color();
+    init_pair(COLOR_RED, COLOR_RED, COLOR_BLACK);
+    init_pair(COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
+    init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(COLOR_CYAN, COLOR_CYAN, COLOR_BLACK);
+    init_pair(COLOR_BLUE, COLOR_BLUE, COLOR_BLACK);
+    init_pair(COLOR_WHITE, COLOR_WHITE, COLOR_BLACK);
 }
 
 void NextTurn(int worldX, int worldY) {
@@ -728,7 +741,37 @@ void PrintMap(int worldX, int worldY) {
     //Print map
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
+            //Find color to switch to
+            int color = -1;
+            int bold = 0;
+            if (!strcmp(currMap.map[i][j], TREE) || !strcmp(currMap.map[i][j], MTN)) {
+                color = COLOR_WHITE;
+            } else if (!strcmp(currMap.map[i][j], ROAD)) {
+                color = COLOR_YELLOW;
+            } else if (!strcmp(currMap.map[i][j], LNGR) || !strcmp(currMap.map[i][j], CLRNG)) {
+                color = COLOR_GREEN;
+            } else if (!strcmp(currMap.map[i][j], WATER)) {
+                color = COLOR_CYAN;
+            } else if (!strcmp(currMap.map[i][j], CNTR) || !strcmp(currMap.map[i][j], PKMART)) {
+                color = COLOR_MAGENTA;
+            } else if (!strcmp(currMap.map[i][j], PC)) {
+                color = COLOR_WHITE;
+                bold = 1;
+            } else if (!strcmp(currMap.map[i][j], HIKER) || 
+            !strcmp(currMap.map[i][j], RIVAL) || 
+            !strcmp(currMap.map[i][j], PACER) || 
+            !strcmp(currMap.map[i][j], WANDERER) || 
+            !strcmp(currMap.map[i][j], SENTRY) || 
+            !strcmp(currMap.map[i][j], EXPLORER)) {
+                color = COLOR_RED;
+                bold = 1;
+            }
+
+            if (bold) attron(A_BOLD);
+            attron(COLOR_PAIR(color));
             printw("%s", currMap.map[i][j]);
+            attroff(COLOR_PAIR(color));
+            if (bold) attroff(A_BOLD);
         }
         //printw("\n");
     }
