@@ -160,6 +160,7 @@ int main(int argc, char *argv[]) {
     //Start movement 
     char command = 'c';
     while (command != 'q') {
+        clear();
         PrintMap(x, y);
         refresh();
 
@@ -729,7 +730,7 @@ void PrintMap(int worldX, int worldY) {
         for (int j = 0; j < COLUMNS; j++) {
             printw("%s", currMap.map[i][j]);
         }
-        printw("\n");
+        //printw("\n");
     }
     printw("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
