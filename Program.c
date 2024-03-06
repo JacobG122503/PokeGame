@@ -230,8 +230,8 @@ int main(int argc, char *argv[]) {
 
         // Enter building
         if (command == '>') {
-            if (strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
-                strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
+            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
+                !strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
 
                 char building = ' ';
                 attron(COLOR_PAIR(COLOR_MAGENTA));
@@ -241,6 +241,89 @@ int main(int argc, char *argv[]) {
                 while (building != '<')
                     building = getchar();
             }
+        }
+
+        // View trainer list
+        if (command == 't') {
+            //Set up box for info
+            for (int i = 0; i < (ROWS - 4) / 2; i++) {
+                //Top row
+                for (int j = 0; j < COLUMNS - 8; j++) {
+                    mvprintw(3 + i, 4 + j, " ");
+                }
+                //Bottom row
+                for (int j = 0; j < COLUMNS - 8; j++) {
+                    mvprintw((ROWS - 4) - i, 4 + j, " ");
+                }
+                usleep(35000);
+                refresh();
+            }
+            //Print info
+            usleep(10000);
+            attron(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
+            mvprintw(4, (COLUMNS/2) - 6, "TRAINER INFO");
+
+            //Set up trainer info string array
+            char *trainerInfo[numTrainers];
+            for (int i = 0; i < numTrainers; i++) {
+                NPCs currNPC = worldMap[x][y]->npcs[i];
+
+                // Get name of npc
+                char *name;
+                switch (currNPC.type) {
+                case hikerNPC:
+                    name = "Hiker";
+                    break;
+                case rivalNPC:
+                    name = "Rival";
+                    break;
+                case pacerNPC:
+                    name = "Pacer";
+                    break;
+                case wandererNPC:
+                    name = "Wanderer";
+                    break;
+                case sentryNPC:
+                    name = "Sentry";
+                    break;
+                case explorerNPC:
+                    name = "Explorer";
+                    break;
+                default:
+                    name = "Unknown NPC";
+                    break;
+                }
+
+                // Get both directions
+                char *xStr, *yStr;
+                int xDist = Player->x - currNPC.x;
+                int yDist = Player->y - currNPC.y;
+                if (xDist < 0) {
+                    asprintf(&xStr, "South %d squares", abs(xDist));
+                } else {
+                    asprintf(&xStr, "North %d squares", xDist);
+                }
+                if (yDist < 0) {
+                    asprintf(&yStr, "East %d squares", abs(yDist));
+                } else {
+                    asprintf(&yStr, "West %d squares", yDist);
+                }
+
+                asprintf(&trainerInfo[i], "%s - Location: %s, %s", name, xStr, yStr);
+
+                free(xStr);
+                free(yStr);
+            }
+
+            //Print all trainers 
+            for (int i = 0, s = 0; i < numTrainers; i++, s++) {
+                mvprintw(6 + i + s, 5, "%s", trainerInfo[i]);
+                free(trainerInfo[i]);
+            }
+
+            refresh();
+            getchar();
+            attroff(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
         }
 
         //Old movement logic
