@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     noecho();
     curs_set(0);
     SetupColors();
-    
+
     //Start movement 
     char command = 'c';
     while (command != 'q') {
@@ -171,30 +171,83 @@ int main(int argc, char *argv[]) {
 
         //printw("What would you like to do next? Type i to see available options.\n");
         command = getchar();
-        
-        //Instructions
-        if (command == 'i') {
-            printw("%sCOMMAND LIST%s\n","green", "reset");
-            printw("n: Move to the map immediately north of the current map and display it.\n"
-                "s: Move to the map immediately south of the current map and display it.\n"
-                "e: Move to the map immediately east of the current map and display it.\n"
-                "w: Move to the map immediately west of the current map and display it.\n"
-                "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
-                "q: Quit the game.\n");
-            printw("\nType c to continue: ");
-            refresh();
-            while (command != 'c') command = getchar();
-            continue;
-        }
-        if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
-            if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
-            if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
-            if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
-            if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
 
-            GenerateMap(x, y);
-            continue;
+        // Movement commands
+        int moveX = 0;
+        int moveY = 0;
+        // Upper left
+        if (command == '7' || command == 'y') {
+            moveX--;
+            moveY--;
         }
+        // Up
+        else if (command == '8' || command == 'k') {
+            moveX--;
+        }
+        // Upper right
+        else if (command == '9' || command == 'u') {
+            moveY++;
+            moveX--;
+        }
+        // Right
+        else if (command == '6' || command == 'l') {
+            moveY++;
+        }
+        // Lower right
+        else if (command == '3' || command == 'n') {
+            moveY++;
+            moveX++;
+        }
+        // Down
+        else if (command == '2' || command == 'j') {
+            moveX++;
+        }
+        // Lower left
+        else if (command == '1' || command == 'b') {
+            moveY--;
+            moveX++;
+        }
+        // Left
+        else if (command == '4' || command == 'h') {
+            moveY--;
+        }
+
+        // Run checks
+        if (Player->x + moveX > 0 && Player->y + moveY > 0 && //Later on change this to not be mountain, so users can go to other maps
+            Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
+            strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
+            strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
+
+            Player->x += moveX;
+            Player->y += moveY;
+        }
+
+
+        //Old movement logic
+        //Instructions
+        // if (command == 'i') {
+        //     printw("%sCOMMAND LIST%s\n","green", "reset");
+        //     printw("n: Move to the map immediately north of the current map and display it.\n"
+        //         "s: Move to the map immediately south of the current map and display it.\n"
+        //         "e: Move to the map immediately east of the current map and display it.\n"
+        //         "w: Move to the map immediately west of the current map and display it.\n"
+        //         "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
+        //         "q: Quit the game.\n");
+        //     printw("\nType c to continue: ");
+        //     refresh();
+        //     while (command != 'c') command = getchar();
+        //     continue;
+        // }
+
+        // if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
+        //     if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
+        //     if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
+        //     if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
+        //     if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
+
+        //     GenerateMap(x, y);
+        //     continue;
+        // }
         // if (command == 'f') {
         //     int oldX = x;
         //     int oldY = y;
@@ -208,16 +261,16 @@ int main(int argc, char *argv[]) {
         //     }
         //     GenerateMap(x, y);
         // }
-        if (command == 'm') {
-            while (1) {
-                NextTurn(x, y);
-                PrintMap(x, y);
-                refresh();
-                usleep(40000);
-                clear();
-            }
-            continue;
-        }
+        // if (command == 'm') {
+        //     while (1) {
+        //         NextTurn(x, y);
+        //         PrintMap(x, y);
+        //         refresh();
+        //         usleep(40000);
+        //         clear();
+        //     }
+        //     continue;
+        // }
     }
 
     printw("Closing game...\n");
