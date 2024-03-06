@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
+    char* statusMessage = "";
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
@@ -161,15 +162,18 @@ int main(int argc, char *argv[]) {
 
     //Start movement 
     char command = 'c';
-    while (command != 'q') {
+    while (command != 'Q') {
         clear();
         PrintMap(x, y);
+        attron(COLOR_PAIR(COLOR_MAGENTA));
+        printw(statusMessage);
+        attroff(COLOR_PAIR(COLOR_MAGENTA));
         refresh();
+        statusMessage = "";
 
         Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
-        //printw("What would you like to do next? Type i to see available options.\n");
         command = getchar();
 
         // Movement commands
@@ -213,15 +217,31 @@ int main(int argc, char *argv[]) {
         }
 
         // Run checks
-        if (Player->x + moveX > 0 && Player->y + moveY > 0 && //Later on change this to not be mountain, so users can go to other maps
-            Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
-            strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
-            strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
+        if (!(moveX == 0 && moveY == 0)) {
+            if (Player->x + moveX > 0 && Player->y + moveY > 0 && // Later on change this to not be mountain, so users can go to other maps
+                Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
 
-            Player->x += moveX;
-            Player->y += moveY;
+                Player->x += moveX;
+                Player->y += moveY;
+            }
         }
 
+        // Enter building
+        if (command == '>') {
+            if (strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
+                strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
+
+                char building = ' ';
+                attron(COLOR_PAIR(COLOR_MAGENTA));
+                printw("You have entered the building! Type < to leave");
+                attroff(COLOR_PAIR(COLOR_MAGENTA));
+                refresh();
+                while (building != '<')
+                    building = getchar();
+            }
+        }
 
         //Old movement logic
         //Instructions
