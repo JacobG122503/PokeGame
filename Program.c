@@ -158,6 +158,8 @@ int main(int argc, char *argv[]) {
     raw(); 
     noecho();
     curs_set(0);
+    keypad(stdscr, TRUE);
+
     SetupColors();
 
     //Start movement 
@@ -174,7 +176,7 @@ int main(int argc, char *argv[]) {
         Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
-        command = getchar();
+        command = getch();
 
         // Movement commands
         int moveX = 0;
@@ -239,7 +241,7 @@ int main(int argc, char *argv[]) {
                 attroff(COLOR_PAIR(COLOR_MAGENTA));
                 refresh();
                 while (building != '<')
-                    building = getchar();
+                    building = getch();
             }
         }
 
@@ -315,14 +317,41 @@ int main(int argc, char *argv[]) {
                 free(yStr);
             }
 
-            //Print all trainers 
-            for (int i = 0, s = 0; i < numTrainers; i++, s++) {
-                mvprintw(6 + i + s, 5, "%s", trainerInfo[i]);
+            // Print all trainers
+            int i, s;
+            int scroll = 0;
+            int intCommand = 0;
+            // 27 is esc
+            while (intCommand != 27 && intCommand != 'q') {
+                // Clear area
+                for (i = 0; i < (ROWS - 9); i++) {
+                    for (int j = 0; j < COLUMNS - 8; j++) {
+                        mvprintw(6 + i , 4 + j, " ");
+                    }
+                }
+
+                // Print trainers
+                for (i = 0 + scroll, s = 0; i < numTrainers && (6 + s) < ROWS - 4; i++, s += 2) {
+                    mvprintw(6 + s, 5, "%s", trainerInfo[i]);
+                }
+                refresh();
+                intCommand = getch();
+
+                // Scroll logic
+                if (intCommand == KEY_UP) {
+                    if ((scroll - 1) >= 0)
+                        scroll--;
+                } else if (intCommand == KEY_DOWN) {
+                    if ((scroll + 1) < numTrainers)
+                        scroll++;
+                }
+            }
+
+            // Free list
+            for (i = 0; i < numTrainers; i++) {
                 free(trainerInfo[i]);
             }
 
-            refresh();
-            getchar();
             attroff(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
         }
 
