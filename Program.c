@@ -32,6 +32,7 @@ typedef enum {
 } npc;
 
 typedef struct NPCs {
+    int alive;
     int x;
     int y;
     int dirX; 
@@ -74,7 +75,6 @@ typedef struct PlayerChar {
 
 //Prototypes
 void SetupColors();
-void NextTurn(int worldX, int worldY);
 void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
 void SpawnNPCs(int number, int worldX, int worldY);
@@ -172,12 +172,23 @@ int main(int argc, char *argv[]) {
         // Check if it is PCs turn
         // Note: make sure later on to set turn time to 0 when entering a new map.
         NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
+        NPCs *battleNPC = NULL;
+        int battleTime = 0;
 
         if (Player->turnTime > nextNPC->turnTime) {
             MoveNPC(x, y, nextNPC);
 
-            heap_insert(&worldMap[x][y]->turns, nextNPC);
-            continue;
+            //Check if battle time 
+            battleTime = nextNPC->x == Player->x && nextNPC->y == Player->y && nextNPC->alive;
+            if (battleTime) {
+                statusMessage = "You have entered a battle!! Hit esc or q to defeat them.";
+                battleNPC = nextNPC;
+            } else {
+                heap_insert(&worldMap[x][y]->turns, nextNPC);
+                continue;
+            }
+
+            
         }
         heap_insert(&worldMap[x][y]->turns, nextNPC);
 
@@ -188,6 +199,17 @@ int main(int argc, char *argv[]) {
         attroff(COLOR_PAIR(COLOR_MAGENTA));
         refresh();
         statusMessage = "";
+
+        if (battleTime) {
+            while (battleTime) {
+                command = getch();
+                if (command == 'q' || command == 27) {
+                    battleNPC->alive = 0;
+                    battleTime = false;
+                }
+            }
+            continue;
+        }
 
         command = getch();
 
@@ -444,13 +466,6 @@ void SetupColors() {
     init_pair(COLOR_WHITE, COLOR_WHITE, COLOR_BLACK);
 }
 
-void NextTurn(int worldX, int worldY) {
-    NPCs *nextNPC = heap_remove_min(&worldMap[worldX][worldY]->turns);
-    MoveNPC(worldX, worldY, nextNPC);
-    
-    heap_insert(&worldMap[worldX][worldY]->turns, nextNPC);
-}
-
 void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
     if (currNPC->type == hikerNPC || currNPC->type == rivalNPC) {
         int nextX = currNPC->x;
@@ -571,6 +586,7 @@ int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
 
     //Check if next spot has an NPC there already
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
+        if (!currMap.npcs[i].alive) continue;
         if (currMap.npcs[i].x == nextX &&
             currMap.npcs[i].y == nextY) {
                 return 0;
@@ -611,6 +627,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.dirX = 0;
         currNPC.dirY= 0;
         currNPC.turnTime = 0;
+        currNPC.alive = 1;
 
         if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
             i--;
@@ -918,6 +935,7 @@ void PrintMap(int worldX, int worldY) {
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
         char *nextNPC;
         NPCs currNPC = currMap.npcs[i];
+        if (!currNPC.alive) continue;
 
         switch (currNPC.type) {
         case hikerNPC:
