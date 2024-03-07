@@ -338,6 +338,11 @@ int main(int argc, char *argv[]) {
                     break;
                 }
 
+                if (!currNPC.alive) {
+                    asprintf(&trainerInfo[i], "%s - (dead)", name);
+                    continue;
+                }
+
                 // Get both directions
                 char *xStr, *yStr;
                 int xDist = Player->x - currNPC.x;

@@ -1,5 +1,5 @@
 # PokeGame 327
-## Version 1.04
+## Version 1.05
 ### Creator: Jacob Garcia
 
 PokeGame 327 is a game currently under development for ISU class COM S 327. It is a Pokemon-style game, and it is expected to be finished by May when the class concludes. Please see below sections for information about the game.
@@ -8,8 +8,8 @@ PokeGame 327 is a game currently under development for ISU class COM S 327. It i
 
 The map is randomly generated each time with different roads and terrain.
 
-- Mountains (%): Grey; denotes the world border.
-- Trees (^): Grey; you cannot walk past them.
+- Mountains (%): White; denotes the world border.
+- Trees (^): White; you cannot walk past them.
 - Water (~): Blue; you cannot pass through.
 - Short grass (.): Green; clearings where you can walk through without encountering Pokemon.
 - Tall grass (:): Green; you can walk through tall grass but might be stopped by Pokemon.
@@ -22,19 +22,39 @@ The map is randomly generated each time with different roads and terrain.
 There are different types of characters. The player, NPCs, and Pokemon.
 
 - PC (@): White; the player.
-- Hikers (h): Bold Red; Hikers path to the PC
-- Rivals (r): Bold Red; Rivals also path to the PC
-- Pacers (p): Bold Red; Pacers start with a direction and walk until they hit some terrain they cannot traverse, then they turn around and repeat, pacing back and forth.
-- Wanderers (w): Bold Red; Wanderers never leave the terrain region they were spawned in. They have a direction and walk straight ahead to the edge of the terrain, whereupon they turn in a random direction and repeat.
-- Sentries (s): Bold Red; Sentries don’t move, they just wait for the action to come to them.
-- Explorers (e): Bold Red; Explorers move like wanderers, but they cross terrain type boundaries, only changing to a new, random direction when they reach an impassable terrain element
+- Hikers (h): Red; Hikers path to the PC
+- Rivals (r): Red; Rivals also path to the PC
+- Pacers (p): Red; Pacers start with a direction and walk until they hit some terrain they cannot traverse, then they turn around and repeat, pacing back and forth.
+- Wanderers (w): Red; Wanderers never leave the terrain region they were spawned in. They have a direction and walk straight ahead to the edge of the terrain, whereupon they turn in a random direction and repeat.
+- Sentries (s): Red; Sentries don’t move, they just wait for the action to come to them.
+- Explorers (e): Red; Explorers move like wanderers, but they cross terrain type boundaries, only changing to a new, random direction when they reach an impassable terrain element
 
 ## Controls 
 
-NOTE TO TAs: For this assignment, 1.04, use the command 'm' to start the movement process.
+Movement Controls:
+- 7 or y: Move PC one cell to the upper left.
+- 8 or k: Move PC one cell up.
+- 9 or u: Move PC one cell to the upper right.
+- 6 or l: Move PC one cell to the right.
+- 3 or n: Move PC one cell to the lower right.
+- 2 or j: Move PC one cell down.
+- 1 or b: Move PC one cell to the lower left.
+- 4 or h: Move PC one cell to the left.
 
-There are only a few things you can do at the moment. Right now when you load in the game, type i to see available commands.
-You can move in any of the cardinal directions or you can fly to a specific point on the map. 
+Interactions:
+- ">" : Attempt to enter a Pokemart or Pokemon Center. Works only if standing on a building.
+- "<" : Attempt to exit a Pokemart or Pokemon Center. 
+- 5 or space or . : Rest for a turn. NPCs still move.
+
+Display Options:
+- t: Display a list of trainers on the map, with their symbol and position relative to the PC (e.g., "r, 2 north and 14 west").
+- up arrow: When displaying trainer list, if entire list does not fit in the screen and not currently at the top of the list, scroll list up.
+- down arrow: When displaying trainer list, if entire list does not fit in the screen and not currently at the bottom of the list, scroll list down.
+- escape or q : When displaying trainer list, return to character control.
+
+Quit Game:
+- Q: Quit the game. 
+
 
 ## Running the Game
 
@@ -53,6 +73,11 @@ of times I have ran my program, I have NEVER had these issues again but I wanted
 - 1708632100 - Buildings overlap
 
 ### Updates
+
+**1.05 (3/7/24)**
+- Added user interface with ncurses
+- Player can move around the map
+- Added new view to see all trainers on current map
 
 **1.04 (2/23/24)**
 - Added all the NPCs
