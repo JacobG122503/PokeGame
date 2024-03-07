@@ -69,6 +69,7 @@ typedef struct PlayerChar {
     int y;
     int worldX;
     int worldY;
+    int turnTime;
 } PlayerChar;
 
 //Prototypes
@@ -165,6 +166,21 @@ int main(int argc, char *argv[]) {
     //Start movement 
     char command = 'c';
     while (command != 'Q') {
+        Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
+        Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
+
+        // Check if it is PCs turn
+        // Note: make sure later on to set turn time to 0 when entering a new map.
+        NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
+
+        if (Player->turnTime > nextNPC->turnTime) {
+            MoveNPC(x, y, nextNPC);
+
+            heap_insert(&worldMap[x][y]->turns, nextNPC);
+            continue;
+        }
+        heap_insert(&worldMap[x][y]->turns, nextNPC);
+
         clear();
         PrintMap(x, y);
         attron(COLOR_PAIR(COLOR_MAGENTA));
@@ -172,9 +188,6 @@ int main(int argc, char *argv[]) {
         attroff(COLOR_PAIR(COLOR_MAGENTA));
         refresh();
         statusMessage = "";
-
-        Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
-        Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
         command = getch();
 
@@ -225,9 +238,16 @@ int main(int argc, char *argv[]) {
                 strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
                 strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
 
+                // Add time to Player from last terrain weight and move
+                Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
                 Player->x += moveX;
                 Player->y += moveY;
             }
+        }
+
+        //Rest for a turn
+        if (command == '5' || command == ' ' || command == '.') {
+            Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
         }
 
         // Enter building
@@ -486,6 +506,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = -currNPC->dirX;
             currNPC->dirY = -currNPC->dirY;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     } 
     else if (currNPC->type == wandererNPC) {
@@ -508,6 +529,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     } 
     else if (currNPC->type == explorerNPC) {
@@ -528,6 +550,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     }
     else if (currNPC->type == sentryNPC) {
@@ -614,6 +637,7 @@ void PlacePC(int worldX, int worldY) {
             Player->y = col;
             Player->worldX = worldX;
             Player->worldY = worldY;
+            Player->turnTime = 0;
             placed = 1;
         }
     }
