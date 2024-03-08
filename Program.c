@@ -206,6 +206,24 @@ int main(int argc, char *argv[]) {
                 if (command == 'q' || command == 27) {
                     battleNPC->alive = 0;
                     battleTime = false;
+
+                    // NPC death animation
+                    attron(COLOR_PAIR(COLOR_RED) | A_BOLD);
+
+                    for (int i = 0; i < 2; i++) {
+                        for (int j = -i; j <= i; j++) {
+                            mvprintw(battleNPC->x + i, battleNPC->y + j, "O");
+                            mvprintw(battleNPC->x - i, battleNPC->y + j, "O");
+                        }
+                        for (int j = -(i - 1); j <= (i - 1); j++) {
+                            mvprintw(battleNPC->x + j, battleNPC->y + i, "O");
+                            mvprintw(battleNPC->x + j, battleNPC->y - i, "O");
+                        }
+                        refresh();
+                        usleep(150000);
+                    }
+
+                    attroff(COLOR_PAIR(COLOR_RED) | A_BOLD);
                 }
             }
             continue;
