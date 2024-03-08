@@ -208,8 +208,7 @@ int main(int argc, char *argv[]) {
                     battleTime = false;
 
                     // NPC death animation
-                    attron(COLOR_PAIR(COLOR_RED) | A_BOLD);
-
+                    attron(COLOR_PAIR(COLOR_YELLOW) | A_BOLD);
                     for (int i = 0; i < 2; i++) {
                         for (int j = -i; j <= i; j++) {
                             mvprintw(battleNPC->x + i, battleNPC->y + j, "O");
@@ -220,10 +219,24 @@ int main(int argc, char *argv[]) {
                             mvprintw(battleNPC->x + j, battleNPC->y - i, "O");
                         }
                         refresh();
-                        usleep(150000);
+                        usleep(110000);
                     }
-
+                    attroff(COLOR_PAIR(COLOR_YELLOW) | A_BOLD);
+                    attron(COLOR_PAIR(COLOR_RED) | A_BOLD);
+                    for (int i = 0; i < 2; i++) {
+                        for (int j = -i; j <= i; j++) {
+                            mvprintw(battleNPC->x + i, battleNPC->y + j, "X");
+                            mvprintw(battleNPC->x - i, battleNPC->y + j, "X");
+                        }
+                        for (int j = -(i - 1); j <= (i - 1); j++) {
+                            mvprintw(battleNPC->x + j, battleNPC->y + i, "X");
+                            mvprintw(battleNPC->x + j, battleNPC->y - i, "X");
+                        }
+                        refresh();
+                        usleep(110000);
+                    }
                     attroff(COLOR_PAIR(COLOR_RED) | A_BOLD);
+                    usleep(150000);
                 }
             }
             continue;
