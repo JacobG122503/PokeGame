@@ -97,7 +97,7 @@ char* WATER = "~";
 char* CNTR = "C";
 char* PKMART = "M";
 
-char* PC = "@";
+// char* PC = "@";
 char* HIKER = "h";
 char* RIVAL = "r";
 char* PACER = "p";
@@ -966,7 +966,7 @@ void PrintMap(int worldX, int worldY) {
 
     //Place NPCs / PC
     if (worldX == Player->worldX && worldY == Player->worldY) {
-        currMap.map[Player->x][Player->y] = PC;
+        currMap.map[Player->x][Player->y] = "@";
     }
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
         char *nextNPC;
@@ -1017,7 +1017,7 @@ void PrintMap(int worldX, int worldY) {
                 color = COLOR_CYAN;
             } else if (!strcmp(currMap.map[i][j], CNTR) || !strcmp(currMap.map[i][j], PKMART)) {
                 color = COLOR_MAGENTA;
-            } else if (!strcmp(currMap.map[i][j], PC)) {
+            } else if (!strcmp(currMap.map[i][j], "@")) {
                 color = COLOR_WHITE;
                 bold = 1;
             } else if (!strcmp(currMap.map[i][j], HIKER) || 
