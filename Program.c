@@ -1,14 +1,15 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.04
+Version: 1.05
 */
+#include <limits.h>
+#include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include <limits.h>
- #include <unistd.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "heap.h"
 
@@ -31,6 +32,7 @@ typedef enum {
 } npc;
 
 typedef struct NPCs {
+    int alive;
     int x;
     int y;
     int dirX; 
@@ -68,10 +70,11 @@ typedef struct PlayerChar {
     int y;
     int worldX;
     int worldY;
+    int turnTime;
 } PlayerChar;
 
 //Prototypes
-void NextTurn(int worldX, int worldY);
+void SetupColors();
 void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
 void SpawnNPCs(int number, int worldX, int worldY);
@@ -84,51 +87,23 @@ static int32_t path_cmp(const void *key, const void *with);
 static int32_t npc_turn_cmp(const void *key, const void *with);
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
-//Colors
-#define BLACK   "\x1b[30m"
-#define RED     "\x1b[31m"
-#define BLDRED  "\e[1;31m"
-#define GREEN   "\x1b[32m"
-#define YELLOW  "\x1b[33m"
-#define PURPLE  "\033[0;34m"
-#define MAGENTA "\x1b[35m"
-#define CYAN    "\x1b[36m"
-#define WHITE   "\x1b[37m"
-#define RESET   "\x1b[0m"
-#define GREY    "\x1b[90m"
-
 //Elements and Characters
-char* MTN = GREY "%" RESET;
-char* TREE = GREY "^" RESET;
-char* ROAD = YELLOW "#" RESET;
-char* LNGR = GREEN ":" RESET;
-char* CLRNG = GREEN "." RESET;
-char* WATER = CYAN "~" RESET;
-char* CNTR = MAGENTA "C" RESET;
-char* PKMART = MAGENTA "M" RESET;
+char* MTN = "%";
+char* TREE = "^";
+char* ROAD = "#";
+char* LNGR = ":";
+char* CLRNG = ".";
+char* WATER = "~";
+char* CNTR = "C";
+char* PKMART = "M";
 
-char* PC = RESET "@" RESET;
-char* HIKER = BLDRED "h" RESET;
-char* RIVAL = BLDRED "r" RESET;
-char* PACER = BLDRED "p" RESET;
-char* WANDERER = BLDRED "w" RESET;
-char* SENTRY = BLDRED "s" RESET;
-char* EXPLORER = BLDRED "e" RESET;
-
-// • Hikers: These will be represented by the letter ’h’. Hikers path to the PC by following a maximum
-// gradient on the hiker map.
-// • Rivals: These will be represented by the letter ’r’. Rivals path to the PC by following a maximum
-// gradient on the rival map.
-// • Pacers: These will be represented by the letter ’p’. Pacers start with a direction and walk until they
-// hit some terrain they cannot traverse, then they turn around and repeat, pacing back and forth.
-// • Wanderers: These will be represented by the letter ’w’. Wanderers never leave the terrain region they
-// were spawned in. They have a direction and walk strait ahead to the edge of the terrain, whereupon
-// they turn in a random direction and repeat.
-// • Sentries: These will be represented by the letter ’s’. Sentries don’t move; they just wait for the action
-// to come to them.
-// • Explorers: These will be represented by the letter ’e’. Explorers move like wanderers, but they cross
-// terrain type boundaries, only changing to a new, random direction when they reach an impassable
-// terrain element
+// char* PC = "@";
+char* HIKER = "h";
+char* RIVAL = "r";
+char* PACER = "p";
+char* WANDERER = "w";
+char* SENTRY = "s";
+char* EXPLORER = "e";
 
 struct map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
 PlayerChar *Player;
@@ -142,13 +117,13 @@ int main(int argc, char *argv[]) {
             if (i + 1 < argc) {
                 numTrainers = atoi(argv[i + 1]); 
                 if (numTrainers > MAXNPC) {
-                    system("clear");
-                    printf("The max number of npcs is %d. (Why would you want that many anyway!?)", MAXNPC);
-                    printf("\nProgram closed.\n");
+                    
+                    printw("The max number of npcs is %d. (Why would you want that many anyway!?)", MAXNPC);
+                    printw("\nProgram closed.\n");
                     return 1;
                 }
             } else {
-                printf("Error: --numtrainers switch requires an argument.\n");
+                printw("Error: --numtrainers switch requires an argument.\n");
                 return 1;
             }
         }
@@ -175,98 +150,356 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
+    char* statusMessage = "";
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
 
+    initscr();
+    raw(); 
+    noecho();
+    curs_set(0);
+    keypad(stdscr, TRUE);
+
+    SetupColors();
+
     //Start movement 
     char command = 'c';
-    while (command != 'q') {
-        system("clear");
-        PrintMap(x, y);
-
+    while (command != 'Q') {
         Dijkstra(worldMap[x][y], hikerNPC, Player->x, Player->y);
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
-        // for (int i = 0; i < ROWS; i++) {
-        //     for (int j = 0; j < COLUMNS; j++) {
-        //         if (worldMap[x][y]->hikerMap[i][j] == SHRT_MAX) {
-        //             printf("   ");
-        //             continue;
-        //         }
-        //         if (i == Player->x && j == Player->y) {
-        //             printf("%s%2d%s ", GREEN, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
-        //             continue;
-        //         }
-        //         // if (i == worldMap[x][y]->npcs[0].x && j == worldMap[x][y]->npcs[0].y) {
-        //         //     printf("%s%2d%s ", BLDRED, worldMap[x][y]->hikerMap[i][j] % 100, RESET);
-        //         //     continue;
-        //         // }
-        //         printf("%2d ", worldMap[x][y]->hikerMap[i][j] % 100);
-        //     }
-        //     printf("\n");
-        // }
+        // Check if it is PCs turn
+        // Note: make sure later on to set turn time to 0 when entering a new map.
+        NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
+        NPCs *battleNPC = NULL;
+        int battleTime = 0;
 
-        printf("What would you like to do next? Type i to see available options.\n");
-        scanf(" %c", &command);
-        //Instructions
-        if (command == 'i') {
-            system("clear");
-            printf("%sCOMMAND LIST%s\n", GREEN, RESET);
-            printf("n: Move to the map immediately north of the current map and display it.\n"
-                "s: Move to the map immediately south of the current map and display it.\n"
-                "e: Move to the map immediately east of the current map and display it.\n"
-                "w: Move to the map immediately west of the current map and display it.\n"
-                "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
-                "q: Quit the game.\n");
-            printf("\nType c to continue: ");
-            while (command != 'c') scanf("%c", &command);
-            continue;
-        }
-        if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
-            if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
-            if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
-            if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
-            if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
+        if (Player->turnTime > nextNPC->turnTime) {
+            MoveNPC(x, y, nextNPC);
 
-            GenerateMap(x, y);
-            continue;
-        }
-        if (command == 'f') {
-            int oldX = x;
-            int oldY = y;
-            scanf(" %d %d", &x, &y);
-            x += 200;
-            y += 200;
-            if (x > 400 || y > 400 || x < 0 || y < 0) {
-                x = oldX;
-                y = oldY;
+            //Check if battle time 
+            battleTime = nextNPC->x == Player->x && nextNPC->y == Player->y && nextNPC->alive;
+            if (battleTime) {
+                statusMessage = "You have entered a battle!! Hit esc or q to defeat them.";
+                battleNPC = nextNPC;
+            } else {
+                heap_insert(&worldMap[x][y]->turns, nextNPC);
                 continue;
             }
-            GenerateMap(x, y);
+
+            
         }
-        if (command == 'm') {
-            while (1) {
-                NextTurn(x, y);
-                PrintMap(x, y);
-                usleep(40000);
-                system("clear");
+        heap_insert(&worldMap[x][y]->turns, nextNPC);
+
+        clear();
+        PrintMap(x, y);
+        attron(COLOR_PAIR(COLOR_MAGENTA));
+        printw(statusMessage);
+        attroff(COLOR_PAIR(COLOR_MAGENTA));
+        refresh();
+        statusMessage = "";
+
+        if (battleTime) {
+            while (battleTime) {
+                command = getch();
+                if (command == 'q' || command == 27) {
+                    battleNPC->alive = 0;
+                    battleTime = false;
+
+                    // NPC death animation
+                    attron(COLOR_PAIR(COLOR_YELLOW) | A_BOLD);
+                    for (int i = 0; i < 2; i++) {
+                        for (int j = -i; j <= i; j++) {
+                            mvprintw(battleNPC->x + i, battleNPC->y + j, "O");
+                            mvprintw(battleNPC->x - i, battleNPC->y + j, "O");
+                        }
+                        for (int j = -(i - 1); j <= (i - 1); j++) {
+                            mvprintw(battleNPC->x + j, battleNPC->y + i, "O");
+                            mvprintw(battleNPC->x + j, battleNPC->y - i, "O");
+                        }
+                        refresh();
+                        usleep(110000);
+                    }
+                    attroff(COLOR_PAIR(COLOR_YELLOW) | A_BOLD);
+                    attron(COLOR_PAIR(COLOR_RED) | A_BOLD);
+                    for (int i = 0; i < 2; i++) {
+                        for (int j = -i; j <= i; j++) {
+                            mvprintw(battleNPC->x + i, battleNPC->y + j, "X");
+                            mvprintw(battleNPC->x - i, battleNPC->y + j, "X");
+                        }
+                        for (int j = -(i - 1); j <= (i - 1); j++) {
+                            mvprintw(battleNPC->x + j, battleNPC->y + i, "X");
+                            mvprintw(battleNPC->x + j, battleNPC->y - i, "X");
+                        }
+                        refresh();
+                        usleep(110000);
+                    }
+                    attroff(COLOR_PAIR(COLOR_RED) | A_BOLD);
+                    usleep(150000);
+                }
             }
             continue;
         }
+
+        command = getch();
+
+        // Movement commands
+        int moveX = 0;
+        int moveY = 0;
+        // Upper left
+        if (command == '7' || command == 'y') {
+            moveX--;
+            moveY--;
+        }
+        // Up
+        else if (command == '8' || command == 'k') {
+            moveX--;
+        }
+        // Upper right
+        else if (command == '9' || command == 'u') {
+            moveY++;
+            moveX--;
+        }
+        // Right
+        else if (command == '6' || command == 'l') {
+            moveY++;
+        }
+        // Lower right
+        else if (command == '3' || command == 'n') {
+            moveY++;
+            moveX++;
+        }
+        // Down
+        else if (command == '2' || command == 'j') {
+            moveX++;
+        }
+        // Lower left
+        else if (command == '1' || command == 'b') {
+            moveY--;
+            moveX++;
+        }
+        // Left
+        else if (command == '4' || command == 'h') {
+            moveY--;
+        }
+
+        // Run checks
+        if (!(moveX == 0 && moveY == 0)) {
+            if (Player->x + moveX > 0 && Player->y + moveY > 0 && // Later on change this to not be mountain, so users can go to other maps
+                Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
+
+                // Add time to Player from last terrain weight and move
+                Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
+                Player->x += moveX;
+                Player->y += moveY;
+            }
+        }
+
+        //Rest for a turn
+        if (command == '5' || command == ' ' || command == '.') {
+            Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
+        }
+
+        // Enter building
+        if (command == '>') {
+            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
+                !strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
+
+                char building = ' ';
+                attron(COLOR_PAIR(COLOR_MAGENTA));
+                printw("You have entered the building! Type < to leave");
+                attroff(COLOR_PAIR(COLOR_MAGENTA));
+                refresh();
+                while (building != '<')
+                    building = getch();
+            }
+        }
+
+        // View trainer list
+        if (command == 't') {
+            //Set up box for info
+            for (int i = 0; i < (ROWS - 4) / 2; i++) {
+                //Top row
+                for (int j = 0; j < COLUMNS - 8; j++) {
+                    mvprintw(3 + i, 4 + j, " ");
+                }
+                //Bottom row
+                for (int j = 0; j < COLUMNS - 8; j++) {
+                    mvprintw((ROWS - 4) - i, 4 + j, " ");
+                }
+                usleep(35000);
+                refresh();
+            }
+            //Print info
+            usleep(10000);
+            attron(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
+            mvprintw(4, (COLUMNS/2) - 6, "TRAINER INFO");
+
+            //Set up trainer info string array
+            char *trainerInfo[numTrainers];
+            for (int i = 0; i < numTrainers; i++) {
+                NPCs currNPC = worldMap[x][y]->npcs[i];
+
+                // Get name of npc
+                char *name;
+                switch (currNPC.type) {
+                case hikerNPC:
+                    name = "Hiker";
+                    break;
+                case rivalNPC:
+                    name = "Rival";
+                    break;
+                case pacerNPC:
+                    name = "Pacer";
+                    break;
+                case wandererNPC:
+                    name = "Wanderer";
+                    break;
+                case sentryNPC:
+                    name = "Sentry";
+                    break;
+                case explorerNPC:
+                    name = "Explorer";
+                    break;
+                default:
+                    name = "Unknown NPC";
+                    break;
+                }
+
+                if (!currNPC.alive) {
+                    asprintf(&trainerInfo[i], "%s - (dead)", name);
+                    continue;
+                }
+
+                // Get both directions
+                char *xStr, *yStr;
+                int xDist = Player->x - currNPC.x;
+                int yDist = Player->y - currNPC.y;
+                if (xDist < 0) {
+                    asprintf(&xStr, "South %d squares", abs(xDist));
+                } else {
+                    asprintf(&xStr, "North %d squares", xDist);
+                }
+                if (yDist < 0) {
+                    asprintf(&yStr, "East %d squares", abs(yDist));
+                } else {
+                    asprintf(&yStr, "West %d squares", yDist);
+                }
+
+                asprintf(&trainerInfo[i], "%s - Location: %s, %s", name, xStr, yStr);
+
+                free(xStr);
+                free(yStr);
+            }
+
+            // Print all trainers
+            int i, s;
+            int scroll = 0;
+            int intCommand = 0;
+            // 27 is esc
+            while (intCommand != 27 && intCommand != 'q') {
+                // Clear area
+                for (i = 0; i < (ROWS - 9); i++) {
+                    for (int j = 0; j < COLUMNS - 8; j++) {
+                        mvprintw(6 + i , 4 + j, " ");
+                    }
+                }
+
+                // Print trainers
+                for (i = 0 + scroll, s = 0; i < numTrainers && (6 + s) < ROWS - 4; i++, s += 2) {
+                    mvprintw(6 + s, 5, "%s", trainerInfo[i]);
+                }
+                refresh();
+                intCommand = getch();
+
+                // Scroll logic
+                if (intCommand == KEY_UP) {
+                    if ((scroll - 1) >= 0)
+                        scroll--;
+                } else if (intCommand == KEY_DOWN) {
+                    if ((scroll + 1) < numTrainers)
+                        scroll++;
+                }
+            }
+
+            // Free list
+            for (i = 0; i < numTrainers; i++) {
+                free(trainerInfo[i]);
+            }
+
+            attroff(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
+        }
+
+        //Old movement logic
+        //Instructions
+        // if (command == 'i') {
+        //     printw("%sCOMMAND LIST%s\n","green", "reset");
+        //     printw("n: Move to the map immediately north of the current map and display it.\n"
+        //         "s: Move to the map immediately south of the current map and display it.\n"
+        //         "e: Move to the map immediately east of the current map and display it.\n"
+        //         "w: Move to the map immediately west of the current map and display it.\n"
+        //         "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
+        //         "q: Quit the game.\n");
+        //     printw("\nType c to continue: ");
+        //     refresh();
+        //     while (command != 'c') command = getchar();
+        //     continue;
+        // }
+
+        // if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
+        //     if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
+        //     if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
+        //     if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
+        //     if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
+
+        //     GenerateMap(x, y);
+        //     continue;
+        // }
+        // if (command == 'f') {
+        //     int oldX = x;
+        //     int oldY = y;
+        //     scanf(" %d %d", &x, &y);
+        //     x += 200;
+        //     y += 200;
+        //     if (x > 400 || y > 400 || x < 0 || y < 0) {
+        //         x = oldX;
+        //         y = oldY;
+        //         continue;
+        //     }
+        //     GenerateMap(x, y);
+        // }
+        // if (command == 'm') {
+        //     while (1) {
+        //         NextTurn(x, y);
+        //         PrintMap(x, y);
+        //         refresh();
+        //         usleep(40000);
+        //         clear();
+        //     }
+        //     continue;
+        // }
     }
 
-    printf("Closing game...\n");
+    printw("Closing game...\n");
+    refresh();
     DeleteWorld();
+    endwin();
 
     return 0;
 }
 
-void NextTurn(int worldX, int worldY) {
-    NPCs *nextNPC = heap_remove_min(&worldMap[worldX][worldY]->turns);
-    MoveNPC(worldX, worldY, nextNPC);
-    
-    heap_insert(&worldMap[worldX][worldY]->turns, nextNPC);
+void SetupColors() {
+    start_color();
+    init_pair(COLOR_RED, COLOR_RED, COLOR_BLACK);
+    init_pair(COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
+    init_pair(COLOR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(COLOR_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(COLOR_CYAN, COLOR_CYAN, COLOR_BLACK);
+    init_pair(COLOR_BLUE, COLOR_BLUE, COLOR_BLACK);
+    init_pair(COLOR_WHITE, COLOR_WHITE, COLOR_BLACK);
 }
 
 void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
@@ -324,6 +557,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = -currNPC->dirX;
             currNPC->dirY = -currNPC->dirY;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     } 
     else if (currNPC->type == wandererNPC) {
@@ -346,6 +580,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     } 
     else if (currNPC->type == explorerNPC) {
@@ -366,6 +601,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
         } else {
             currNPC->dirX = 0;
             currNPC->dirY = 0;
+            currNPC->turnTime += worldMap[worldX][worldY]->othersWeights[currNPC->x][currNPC->y];
         }
     }
     else if (currNPC->type == sentryNPC) {
@@ -386,6 +622,7 @@ int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
 
     //Check if next spot has an NPC there already
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
+        if (!currMap.npcs[i].alive) continue;
         if (currMap.npcs[i].x == nextX &&
             currMap.npcs[i].y == nextY) {
                 return 0;
@@ -426,6 +663,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.dirX = 0;
         currNPC.dirY= 0;
         currNPC.turnTime = 0;
+        currNPC.alive = 1;
 
         if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
             i--;
@@ -452,6 +690,7 @@ void PlacePC(int worldX, int worldY) {
             Player->y = col;
             Player->worldX = worldX;
             Player->worldY = worldY;
+            Player->turnTime = 0;
             placed = 1;
         }
     }
@@ -727,11 +966,12 @@ void PrintMap(int worldX, int worldY) {
 
     //Place NPCs / PC
     if (worldX == Player->worldX && worldY == Player->worldY) {
-        currMap.map[Player->x][Player->y] = PC;
+        currMap.map[Player->x][Player->y] = "@";
     }
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
         char *nextNPC;
         NPCs currNPC = currMap.npcs[i];
+        if (!currNPC.alive) continue;
 
         switch (currNPC.type) {
         case hikerNPC:
@@ -753,8 +993,8 @@ void PrintMap(int worldX, int worldY) {
             nextNPC = EXPLORER;
             break;
         default:
-            system("clear");
-            printf("Error generating and printing npcs");
+            
+            printw("Error generating and printing npcs");
             exit(0);
         }
 
@@ -764,11 +1004,41 @@ void PrintMap(int worldX, int worldY) {
     //Print map
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            printf("%s", currMap.map[i][j]);
+            //Find color to switch to
+            int color = -1;
+            int bold = 0;
+            if (!strcmp(currMap.map[i][j], TREE) || !strcmp(currMap.map[i][j], MTN)) {
+                color = COLOR_WHITE;
+            } else if (!strcmp(currMap.map[i][j], ROAD)) {
+                color = COLOR_YELLOW;
+            } else if (!strcmp(currMap.map[i][j], LNGR) || !strcmp(currMap.map[i][j], CLRNG)) {
+                color = COLOR_GREEN;
+            } else if (!strcmp(currMap.map[i][j], WATER)) {
+                color = COLOR_CYAN;
+            } else if (!strcmp(currMap.map[i][j], CNTR) || !strcmp(currMap.map[i][j], PKMART)) {
+                color = COLOR_MAGENTA;
+            } else if (!strcmp(currMap.map[i][j], "@")) {
+                color = COLOR_WHITE;
+                bold = 1;
+            } else if (!strcmp(currMap.map[i][j], HIKER) || 
+            !strcmp(currMap.map[i][j], RIVAL) || 
+            !strcmp(currMap.map[i][j], PACER) || 
+            !strcmp(currMap.map[i][j], WANDERER) || 
+            !strcmp(currMap.map[i][j], SENTRY) || 
+            !strcmp(currMap.map[i][j], EXPLORER)) {
+                color = COLOR_RED;
+                bold = 1;
+            }
+
+            if (bold) attron(A_BOLD);
+            attron(COLOR_PAIR(color));
+            printw("%s", currMap.map[i][j]);
+            attroff(COLOR_PAIR(color));
+            if (bold) attroff(A_BOLD);
         }
-        printf("\n");
+        //printw("\n");
     }
-    printf("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
+    printw("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
 char* FindTerrain() {
@@ -805,9 +1075,6 @@ static int32_t npc_turn_cmp(const void *key, const void *with) {
   return ((NPCs *) key)->turnTime - ((NPCs *) with)->turnTime;
 }
 
-/*
-Credit Geeks for Geeks for inspiration/structure
-*/
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     path npcPath[ROWS][COLUMNS], *npcP;
     heap_t h;
@@ -890,16 +1157,16 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
     // for (int i = 0; i < ROWS; i++){
     //     for (int j = 0; j < COLUMNS; j++){
     //         if(npcPath[i][j].cost == SHRT_MAX){
-    //             printf("   ");
+    //             printw("   ");
     //             continue;
     //         }
     //         if (i == playerX && j == playerY) {
-    //             printf("%s%2d%s ", GREEN, npcPath[i][j].cost % 100, RESET);
+    //             printw("%s%2d%s ",, npcPath[i][j].cost % 100,);
     //             continue;
     //         }
-    //         printf("%2d ", npcPath[i][j].cost % 100);
+    //         printw("%2d ", npcPath[i][j].cost % 100);
     //     }
-    //     printf("\n");
+    //     printw("\n");
     // }
     
 }
