@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     //Odd seeds
     //1708631599 - Endless loop, cant place buildings
     //1708632100 - Buildings overlap
-    time_t seed = time(NULL);
+    time_t seed = 1711027992;//time(NULL);
     srand(seed); 
     FILE *seedFile;
     seedFile = fopen("seeds.txt", "a");
@@ -187,8 +187,6 @@ int main(int argc, char *argv[]) {
                 heap_insert(&worldMap[x][y]->turns, nextNPC);
                 continue;
             }
-
-            
         }
         heap_insert(&worldMap[x][y]->turns, nextNPC);
 
@@ -286,7 +284,7 @@ int main(int argc, char *argv[]) {
 
         // Run checks
         if (!(moveX == 0 && moveY == 0)) {
-            if (Player->x + moveX > 0 && Player->y + moveY > 0 && // Later on change this to not be mountain, so users can go to other maps
+            if (Player->x + moveX > 0 && Player->y + moveY > 0 &&
                 Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
                 strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
                 strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
@@ -295,10 +293,60 @@ int main(int argc, char *argv[]) {
                 Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
                 Player->x += moveX;
                 Player->y += moveY;
+            } else if ((Player->x + moveX == 0 || Player->y + moveY == 0 ||
+                       Player->x + moveX == ROWS - 1 || Player->y + moveY == COLUMNS - 1) &&
+                       !strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], ROAD)) {
+
+                // Player is going to next map
+                int newWorldX = 0;
+                int newWorldY = 0;
+                int newPCX, newPCY;
+                if (Player->y + moveY == worldMap[x][y]->northEnt && Player->x + moveX == 0) {
+                    //North
+                    newWorldY++;
+                    newPCX = ROWS - 2;
+                    newPCY = worldMap[x][y]->northEnt;
+                } else if (Player->y + moveY == worldMap[x][y]->southEnt && Player->x + moveX == ROWS - 1) {
+                    //South
+                    newWorldY--;
+                    newPCX = 1;
+                    newPCY = worldMap[x][y]->southEnt;
+                } else if (Player->y + moveY == 0 && Player->x + moveX == worldMap[x][y]->westEnt) {
+                    //West
+                    newWorldX--;
+                    newPCX = worldMap[x][y]->westEnt;
+                    newPCY = COLUMNS - 2;
+                } else if (Player->y + moveY == COLUMNS - 1 && Player->x + moveX == worldMap[x][y]->eastEnt) {
+                    //East
+                    newWorldX++;
+                    newPCX = worldMap[x][y]->eastEnt;
+                    newPCY = 1;
+                }
+
+                if (!(newWorldX == 0 && newWorldY == 0) && !(x + newWorldX > 400 || y + newWorldY > 400 || x + newWorldX < 0 || y + newWorldY < 0)) {
+                    x += newWorldX;
+                    y += newWorldY;
+
+                    Player->turnTime = 0;
+                    Player->x = newPCX;
+                    Player->y = newPCY;
+                    Player->worldX = x;
+                    Player->worldY = y;
+
+                    GenerateMap(x, y);
+                    if (worldMap[x][y]->turns.size == 0) {
+                        SpawnNPCs(numTrainers, x, y);
+                    } else {
+                        //Set all npcs turn time back to zero
+                        for (int i = 0; i < numTrainers; i++) {
+                            worldMap[x][y]->npcs[i].turnTime = 0;
+                        }
+                    }
+                }
             }
         }
 
-        //Rest for a turn
+        // Rest for a turn
         if (command == '5' || command == ' ' || command == '.') {
             Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
         }
