@@ -1,7 +1,7 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.05
+Version: 1.06
 */
 #include <limits.h>
 #include <ncurses.h>
@@ -81,6 +81,7 @@ void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(int worldX, int worldY);
+// void PrintExploredWorld();
 char* FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
@@ -133,7 +134,7 @@ int main(int argc, char *argv[]) {
     //Odd seeds
     //1708631599 - Endless loop, cant place buildings
     //1708632100 - Buildings overlap
-    time_t seed = 1711027992;//time(NULL);
+    time_t seed = time(NULL);
     srand(seed); 
     FILE *seedFile;
     seedFile = fopen("seeds.txt", "a");
@@ -170,7 +171,6 @@ int main(int argc, char *argv[]) {
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
         // Check if it is PCs turn
-        // Note: make sure later on to set turn time to 0 when entering a new map.
         NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
         NPCs *battleNPC = NULL;
         int battleTime = 0;
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
         heap_insert(&worldMap[x][y]->turns, nextNPC);
 
         clear();
-        PrintMap(x, y);
+        PrintMap(x, y); //TODO make a "world explored" print function. Just print a single char for each map. would be cool
         attron(COLOR_PAIR(COLOR_MAGENTA));
         printw(statusMessage);
         attroff(COLOR_PAIR(COLOR_MAGENTA));
@@ -337,7 +337,7 @@ int main(int argc, char *argv[]) {
                     if (!worldMap[x][y]->turns.initialized) {
                         SpawnNPCs(numTrainers, x, y);
                     } else {
-                        //Set all npcs turn time back to zero
+                        // Set all npcs turn time back to zero
                         for (int i = 0; i < numTrainers; i++) {
                             worldMap[x][y]->npcs[i].turnTime = 0;
                         }
@@ -365,6 +365,67 @@ int main(int argc, char *argv[]) {
                     building = getch();
             }
         }
+
+        // Fly
+        if (command == 'f') {
+            clear();
+            attron(COLOR_PAIR(COLOR_MAGENTA));
+            printw("You are about to fly! Please type your two coordinates you would like to fly to or type q to cancel: \n");
+            refresh();
+            attroff(COLOR_PAIR(COLOR_MAGENTA));
+
+            echo();
+            char input[4];
+            getstr(input);
+            if (!strcmp(input, "q"))
+                continue;
+            char input2[4];
+            getstr(input2);
+            noecho();
+
+            int newX = atoi(input);
+            int newY = atoi(input2);
+            newX += 200;
+            newY += 200;
+
+            if (!(newX > 400 || newY > 400 || newX < 0 || newY < 0)) {
+                x = newX;
+                y = newY;
+                GenerateMap(x, y);
+
+                //Place PC on new map
+                int placed = 0;
+                while (placed == 0) {
+                    int row = rand() % (ROWS - 2) + 1;
+                    int col = rand() % (COLUMNS - 2) + 1;
+                    if (!strcmp(worldMap[x][y]->map[row][col], ROAD)) {
+                        Player->x = row;
+                        Player->y = col;
+                        Player->turnTime = 0;
+                        Player->worldX = x;
+                        Player->worldY = y;
+
+                        placed = 1;
+                    }
+                }
+
+                if (!worldMap[x][y]->turns.initialized) {
+                    SpawnNPCs(numTrainers, x, y);
+                } else {
+                    // Set all npcs turn time back to zero
+                    for (int i = 0; i < numTrainers; i++) {
+                        worldMap[x][y]->npcs[i].turnTime = 0;
+                    }
+                }
+            } else {
+                statusMessage = "Error flying to coordinates. Please make sure they are in the world bounds.";
+            }
+        }
+
+        //Show World Exploration Map
+        // if (command == 'E') {
+        //     PrintExploredWorld();
+        // }
 
         // View trainer list
         if (command == 't') {
@@ -1090,6 +1151,27 @@ void PrintMap(int worldX, int worldY) {
     }
     printw("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
+
+// void PrintExploredWorld() {
+//     clear();
+
+//     int adjust_i = 0;
+//     int adjust_j = 0;
+//     for (int i = 0; i < ROWS + adjust_i; i++) {
+//         for (int j = 0; j < COLUMNS + adjust_j; j++) {
+//             if (worldMap[i][j]) {
+//                 printw("X");
+//             } else {
+//                 printw(" ");
+//             }
+//         }
+//     }
+//     refresh();
+
+//     int command = getch();
+//     if (command == 'q') return;
+// }
+
 
 char* FindTerrain() {
     int ter = rand() % 4 + 1;
