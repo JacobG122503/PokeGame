@@ -334,7 +334,7 @@ int main(int argc, char *argv[]) {
                     Player->worldY = y;
 
                     GenerateMap(x, y);
-                    if (worldMap[x][y]->turns.size == 0) {
+                    if (!worldMap[x][y]->turns.initialized) {
                         SpawnNPCs(numTrainers, x, y);
                     } else {
                         //Set all npcs turn time back to zero
@@ -684,6 +684,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
     struct map *currentMap = worldMap[worldX][worldY];
 
     heap_init(&currentMap->turns, npc_turn_cmp, NULL);
+    currentMap->turns.initialized = 1;
 
     currentMap->nmbOfNPCs = number;
     npc npcList[number];
@@ -966,6 +967,7 @@ struct map GenerateMap(int x, int y) {
     newMap.westEnt = westEnt;
     newMap.eastEnt = eastEnt;
     newMap.nmbOfNPCs = 0;
+    newMap.turns.initialized = 0;
 
     // Initialize terrain weights
     // Hiker weights
