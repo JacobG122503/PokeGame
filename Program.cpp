@@ -3,6 +3,7 @@ PROGRAM INFO
 Author: Jacob Garcia
 Version: 1.06
 */
+#include <iostream>
 #include <limits.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -42,7 +43,7 @@ typedef struct NPCs {
 } NPCs;
 
 struct map {
-    char* map[ROWS][COLUMNS];
+    std::string map[ROWS][COLUMNS];
     int hikerWeights[ROWS][COLUMNS];
     int othersWeights[ROWS][COLUMNS];
     NPCs npcs[MAXNPC];
@@ -82,29 +83,28 @@ void PlacePC(int worldX, int worldY);
 struct map GenerateMap(int x, int y);
 void PrintMap(int worldX, int worldY);
 // void PrintExploredWorld();
-char* FindTerrain();
+std::string FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
 static int32_t npc_turn_cmp(const void *key, const void *with);
 static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
 
 //Elements and Characters
-char* MTN = "%";
-char* TREE = "^";
-char* ROAD = "#";
-char* LNGR = ":";
-char* CLRNG = ".";
-char* WATER = "~";
-char* CNTR = "C";
-char* PKMART = "M";
+std::string MTN = "%";
+std::string TREE = "^";
+std::string ROAD = "#";
+std::string LNGR = ":";
+std::string CLRNG = ".";
+std::string WATER = "~";
+std::string CNTR = "C";
+std::string PKMART = "M";
 
-// char* PC = "@";
-char* HIKER = "h";
-char* RIVAL = "r";
-char* PACER = "p";
-char* WANDERER = "w";
-char* SENTRY = "s";
-char* EXPLORER = "e";
+std::string HIKER = "h";
+std::string RIVAL = "r";
+std::string PACER = "p";
+std::string WANDERER = "w";
+std::string SENTRY = "s";
+std::string EXPLORER = "e";
 
 struct map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
 PlayerChar *Player;
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
     fprintf(seedFile, "%ld\n", seed);
     fclose(seedFile);
 
-    Player = malloc(sizeof(PlayerChar));
+    Player = new PlayerChar;
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
-    char* statusMessage = "";
+    std::string statusMessage = "";
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
         // Check if it is PCs turn
-        NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
+        NPCs *nextNPC = (NPCs *) heap_remove_min(&worldMap[x][y]->turns);
         NPCs *battleNPC = NULL;
         int battleTime = 0;
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         clear();
         PrintMap(x, y); //TODO make a "world explored" print function. Just print a single char for each map. would be cool
         attron(COLOR_PAIR(COLOR_MAGENTA));
-        printw(statusMessage);
+        printw(statusMessage.c_str());
         attroff(COLOR_PAIR(COLOR_MAGENTA));
         refresh();
         statusMessage = "";
@@ -286,8 +286,8 @@ int main(int argc, char *argv[]) {
         if (!(moveX == 0 && moveY == 0)) {
             if (Player->x + moveX > 0 && Player->y + moveY > 0 &&
                 Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
-                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
-                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), WATER.c_str()) &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), TREE.c_str())) {
 
                 // Add time to Player from last terrain weight and move
                 Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
                 Player->y += moveY;
             } else if ((Player->x + moveX == 0 || Player->y + moveY == 0 ||
                        Player->x + moveX == ROWS - 1 || Player->y + moveY == COLUMNS - 1) &&
-                       !strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], ROAD)) {
+                       !strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), ROAD.c_str())) {
 
                 // Player is going to next map
                 int newWorldX = 0;
@@ -353,8 +353,8 @@ int main(int argc, char *argv[]) {
 
         // Enter building
         if (command == '>') {
-            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
-                !strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
+            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y].c_str(), CNTR.c_str()) ||
+                !strcmp(worldMap[x][y]->map[Player->x][Player->y].c_str(), PKMART.c_str())) {
 
                 char building = ' ';
                 attron(COLOR_PAIR(COLOR_MAGENTA));
@@ -398,7 +398,7 @@ int main(int argc, char *argv[]) {
                 while (placed == 0) {
                     int row = rand() % (ROWS - 2) + 1;
                     int col = rand() % (COLUMNS - 2) + 1;
-                    if (!strcmp(worldMap[x][y]->map[row][col], ROAD)) {
+                    if (!strcmp(worldMap[x][y]->map[row][col].c_str(), ROAD.c_str())) {
                         Player->x = row;
                         Player->y = col;
                         Player->turnTime = 0;
@@ -448,12 +448,12 @@ int main(int argc, char *argv[]) {
             mvprintw(4, (COLUMNS/2) - 6, "TRAINER INFO");
 
             //Set up trainer info string array
-            char *trainerInfo[numTrainers];
+            std::string trainerInfo[numTrainers];
             for (int i = 0; i < numTrainers; i++) {
                 NPCs currNPC = worldMap[x][y]->npcs[i];
 
                 // Get name of npc
-                char *name;
+                std::string name;
                 switch (currNPC.type) {
                 case hikerNPC:
                     name = "Hiker";
@@ -479,29 +479,25 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (!currNPC.alive) {
-                    asprintf(&trainerInfo[i], "%s - (dead)", name);
+                    trainerInfo[i] = name + " - (dead)";
                     continue;
                 }
 
-                // Get both directions
-                char *xStr, *yStr;
+                std::string xStr, yStr;
                 int xDist = Player->x - currNPC.x;
                 int yDist = Player->y - currNPC.y;
                 if (xDist < 0) {
-                    asprintf(&xStr, "South %d squares", abs(xDist));
+                    xStr = "South " + std::to_string(abs(xDist)) + " squares";
                 } else {
-                    asprintf(&xStr, "North %d squares", xDist);
+                    xStr = "North " + std::to_string(xDist) + " squares";
                 }
                 if (yDist < 0) {
-                    asprintf(&yStr, "East %d squares", abs(yDist));
+                    yStr = "East " + std::to_string(abs(yDist)) + " squares";
                 } else {
-                    asprintf(&yStr, "West %d squares", yDist);
+                    yStr = "West " + std::to_string(yDist) + " squares";
                 }
 
-                asprintf(&trainerInfo[i], "%s - Location: %s, %s", name, xStr, yStr);
-
-                free(xStr);
-                free(yStr);
+                trainerInfo[i] = name + " - Location: " + xStr + ", " + yStr;
             }
 
             // Print all trainers
@@ -519,7 +515,7 @@ int main(int argc, char *argv[]) {
 
                 // Print trainers
                 for (i = 0 + scroll, s = 0; i < numTrainers && (6 + s) < ROWS - 4; i++, s += 2) {
-                    mvprintw(6 + s, 5, "%s", trainerInfo[i]);
+                    mvprintw(6 + s, 5, "%s", trainerInfo[i].c_str());
                 }
                 refresh();
                 intCommand = getch();
@@ -532,11 +528,6 @@ int main(int argc, char *argv[]) {
                     if ((scroll + 1) < numTrainers)
                         scroll++;
                 }
-            }
-
-            // Free list
-            for (i = 0; i < numTrainers; i++) {
-                free(trainerInfo[i]);
             }
 
             attroff(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
@@ -655,10 +646,10 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
         // If can continue walking, continue
         // Else, go back
-        if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)
+        if (strcmp(nextTer.c_str(), TREE.c_str()) && strcmp(nextTer.c_str(), WATER.c_str()) && strcmp(nextTer.c_str(), MTN.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -671,7 +662,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
     } 
     else if (currNPC->type == wandererNPC) {
         //Wanderes never leave their terrain
-        char *currTer = worldMap[worldX][worldY]->map[currNPC->x][currNPC->y];
+        std::string currTer = worldMap[worldX][worldY]->map[currNPC->x][currNPC->y];
         //Find direction
         while (currNPC->dirX == 0 && currNPC->dirY == 0) {
             currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
@@ -680,8 +671,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (!strcmp(currTer, nextTer)
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (!strcmp(currTer.c_str(), nextTer.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -701,8 +692,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (strcmp(nextTer, WATER) && strcmp(nextTer, MTN) && strcmp(nextTer, TREE)
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (strcmp(nextTer.c_str(), WATER.c_str()) && strcmp(nextTer.c_str(), MTN.c_str()) && strcmp(nextTer.c_str(), TREE.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -761,7 +752,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         }
         
         int nextNpc = rand() % NPCTYPES;
-        npcList[i] = nextNpc;
+        npcList[i] = (npc) nextNpc;
     }
 
     //Initialize all the npcs
@@ -775,7 +766,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.turnTime = 0;
         currNPC.alive = 1;
 
-        if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
+        if (!strcmp(currentMap->map[currNPC.x][currNPC.y].c_str(), WATER.c_str()) || !strcmp(currentMap->map[currNPC.x][currNPC.y].c_str(), TREE.c_str())) {
             i--;
             continue;
         }
@@ -795,7 +786,7 @@ void PlacePC(int worldX, int worldY) {
         int row = rand() % (ROWS - 2) + 1;
         int col = rand() % (COLUMNS - 2) + 1;
 
-        if (!strcmp(map->map[row][col], ROAD)) {
+        if (!strcmp(map->map[row][col].c_str(), ROAD.c_str())) {
             Player->x = row;
             Player->y = col;
             Player->worldX = worldX;
@@ -810,7 +801,7 @@ struct map GenerateMap(int x, int y) {
     //Check if map already exists
     if (worldMap[x][y] != NULL) return *worldMap[x][y];
 
-    char* map[ROWS][COLUMNS];
+    std::string map[ROWS][COLUMNS];
 
     //Fill with blank space
     for (int i = 0; i < ROWS; i++) {
@@ -846,12 +837,12 @@ struct map GenerateMap(int x, int y) {
         int y = rand() % (COLUMNS - 2) + 1;
 
         //Place terrain
-        char* terrain = FindTerrain();
+        std::string terrain = FindTerrain();
         for (int i = x; i < x + newXLength; i++) {
             for (int j = y; j < y + newYLength; j++) {
                 //Check if on border
                 if ((i > 0) && (i < ROWS - 1) && (j > 0) && (j < COLUMNS - 1)) {
-                    if (strcmp(map[i][j], " ") == 0) blankSpace--;
+                    if (strcmp(map[i][j].c_str(), " ") == 0) blankSpace--;
                     map[i][j] = terrain;
                 }
             }
@@ -931,7 +922,7 @@ struct map GenerateMap(int x, int y) {
     //Place PokeMart and PokeCenter 
     int buidlingsPlaced = 0;
     int buildingsToBePlaced = 2;
-    char* building;
+    std::string building;
     int randBuilding = rand() % 2 + 1;
     if (randBuilding == 1) building = CNTR;
     if (randBuilding == 2) building = PKMART;
@@ -966,15 +957,15 @@ struct map GenerateMap(int x, int y) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
                 int spotRow = rand() % (ROWS - 3) + 3;
                 //Check conditions
-                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
-                if (strcmp(map[spotRow - 1][spotCol], CNTR) == 0 ||
-                    strcmp(map[spotRow - 2][spotCol], CNTR) == 0 || 
-                    strcmp(map[spotRow - 1][spotCol + 1], CNTR) == 0 ||
-                    strcmp(map[spotRow - 2][spotCol + 1], CNTR) == 0) continue;
-                if (strcmp(map[spotRow - 1][spotCol], ROAD) != 0 &&
-                    strcmp(map[spotRow - 2][spotCol], ROAD) != 0 && 
-                    strcmp(map[spotRow - 1][spotCol + 1], ROAD) != 0 &&
-                    strcmp(map[spotRow - 2][spotCol + 1], ROAD) != 0) {
+                if (strcmp(map[spotRow][spotCol].c_str(), ROAD.c_str()) != 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol].c_str(), CNTR.c_str()) == 0 || 
+                    strcmp(map[spotRow - 1][spotCol + 1].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol + 1].c_str(), CNTR.c_str()) == 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol].c_str(), ROAD.c_str()) != 0 && 
+                    strcmp(map[spotRow - 1][spotCol + 1].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol + 1].c_str(), ROAD.c_str()) != 0) {
                         map[spotRow - 1][spotCol] = building;
                         map[spotRow - 2][spotCol] = building;
                         map[spotRow - 1][spotCol + 1] = building;
@@ -987,15 +978,15 @@ struct map GenerateMap(int x, int y) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
                 int spotRow = rand() % (ROWS - 6) + 3;
                 //Check conditions
-                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
-                if (strcmp(map[spotRow + 1][spotCol], CNTR) == 0 ||
-                    strcmp(map[spotRow + 2][spotCol], CNTR) == 0 || 
-                    strcmp(map[spotRow + 1][spotCol + 1], CNTR) == 0 ||
-                    strcmp(map[spotRow + 2][spotCol + 1], CNTR) == 0) continue;
-                if (strcmp(map[spotRow + 1][spotCol], ROAD) != 0 &&
-                    strcmp(map[spotRow + 2][spotCol], ROAD) != 0 && 
-                    strcmp(map[spotRow + 1][spotCol + 1], ROAD) != 0 &&
-                    strcmp(map[spotRow + 2][spotCol + 1], ROAD) != 0) {
+                if (strcmp(map[spotRow][spotCol].c_str(), ROAD.c_str()) != 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol].c_str(), CNTR.c_str()) == 0 || 
+                    strcmp(map[spotRow + 1][spotCol + 1].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol + 1].c_str(), CNTR.c_str()) == 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol].c_str(), ROAD.c_str()) != 0 && 
+                    strcmp(map[spotRow + 1][spotCol + 1].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol + 1].c_str(), ROAD.c_str()) != 0) {
                         map[spotRow + 1][spotCol] = building;
                         map[spotRow + 2][spotCol] = building;
                         map[spotRow + 1][spotCol + 1] = building;
@@ -1034,13 +1025,13 @@ struct map GenerateMap(int x, int y) {
     // Hiker weights
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            char *terrain = newMap.map[i][j];
+            std::string terrain = newMap.map[i][j];
 
-            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+            if (!strcmp(terrain.c_str(), CLRNG.c_str()) || !strcmp(terrain.c_str(), ROAD.c_str())) {
                 newMap.hikerWeights[i][j] = 10;
-            } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
+            } else if (!strcmp(terrain.c_str(), LNGR.c_str()) || !strcmp(terrain.c_str(), TREE.c_str())) {
                 newMap.hikerWeights[i][j] = 15;
-            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+            } else if (!strcmp(terrain.c_str(), PKMART.c_str()) || !strcmp(terrain.c_str(), CNTR.c_str())) {
                 newMap.hikerWeights[i][j] = 50;
             } else {
                 newMap.hikerWeights[i][j] = SHRT_MAX;
@@ -1050,13 +1041,13 @@ struct map GenerateMap(int x, int y) {
     //Rival and Other weights
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            char *terrain = newMap.map[i][j];
+            std::string terrain = newMap.map[i][j];
 
-            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+            if (!strcmp(terrain.c_str(), CLRNG.c_str()) || !strcmp(terrain.c_str(), ROAD.c_str())) {
                 newMap.othersWeights[i][j] = 10;
-            } else if (!strcmp(terrain, LNGR)) {
+            } else if (!strcmp(terrain.c_str(), LNGR.c_str())) {
                 newMap.othersWeights[i][j] = 20;
-            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+            } else if (!strcmp(terrain.c_str(), PKMART.c_str()) || !strcmp(terrain.c_str(), CNTR.c_str())) {
                 newMap.othersWeights[i][j] = 50;
             } else {
                 newMap.othersWeights[i][j] = SHRT_MAX;
@@ -1064,7 +1055,7 @@ struct map GenerateMap(int x, int y) {
         }
     }
 
-    worldMap[x][y] = malloc(sizeof(struct map));
+    worldMap[x][y] = new struct map;
     if (worldMap[x][y] != NULL) {
         memcpy(worldMap[x][y], &newMap, sizeof(struct map));
     }
@@ -1080,7 +1071,7 @@ void PrintMap(int worldX, int worldY) {
         currMap.map[Player->x][Player->y] = "@";
     }
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
-        char *nextNPC;
+        std::string nextNPC;
         NPCs currNPC = currMap.npcs[i];
         if (!currNPC.alive) continue;
 
@@ -1118,32 +1109,32 @@ void PrintMap(int worldX, int worldY) {
             //Find color to switch to
             int color = -1;
             int bold = 0;
-            if (!strcmp(currMap.map[i][j], TREE) || !strcmp(currMap.map[i][j], MTN)) {
+            if (!strcmp(currMap.map[i][j].c_str(), TREE.c_str()) || !strcmp(currMap.map[i][j].c_str(), MTN.c_str())) {
                 color = COLOR_WHITE;
-            } else if (!strcmp(currMap.map[i][j], ROAD)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), ROAD.c_str())) {
                 color = COLOR_YELLOW;
-            } else if (!strcmp(currMap.map[i][j], LNGR) || !strcmp(currMap.map[i][j], CLRNG)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), LNGR.c_str()) || !strcmp(currMap.map[i][j].c_str(), CLRNG.c_str())) {
                 color = COLOR_GREEN;
-            } else if (!strcmp(currMap.map[i][j], WATER)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), WATER.c_str())) {
                 color = COLOR_CYAN;
-            } else if (!strcmp(currMap.map[i][j], CNTR) || !strcmp(currMap.map[i][j], PKMART)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), CNTR.c_str()) || !strcmp(currMap.map[i][j].c_str(), PKMART.c_str())) {
                 color = COLOR_MAGENTA;
-            } else if (!strcmp(currMap.map[i][j], "@")) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), "@")) {
                 color = COLOR_WHITE;
                 bold = 1;
-            } else if (!strcmp(currMap.map[i][j], HIKER) || 
-            !strcmp(currMap.map[i][j], RIVAL) || 
-            !strcmp(currMap.map[i][j], PACER) || 
-            !strcmp(currMap.map[i][j], WANDERER) || 
-            !strcmp(currMap.map[i][j], SENTRY) || 
-            !strcmp(currMap.map[i][j], EXPLORER)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), HIKER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), RIVAL.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), PACER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), WANDERER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), SENTRY.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), EXPLORER.c_str())) {
                 color = COLOR_RED;
                 bold = 1;
             }
 
             if (bold) attron(A_BOLD);
             attron(COLOR_PAIR(color));
-            printw("%s", currMap.map[i][j]);
+            printw("%s", currMap.map[i][j].c_str());
             attroff(COLOR_PAIR(color));
             if (bold) attroff(A_BOLD);
         }
@@ -1173,7 +1164,7 @@ void PrintMap(int worldX, int worldY) {
 // }
 
 
-char* FindTerrain() {
+std::string FindTerrain() {
     int ter = rand() % 4 + 1;
 
     if (ter == 1) {
@@ -1190,7 +1181,7 @@ char* FindTerrain() {
 }
 
 void DeleteWorld() {
-    free(Player);
+    delete Player;
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
             free(worldMap[i][j]);
@@ -1249,7 +1240,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
         }
     }
 
-    while ((npcP = heap_remove_min(&h))){
+    while ((npcP = (path *) heap_remove_min(&h))){
         npcP->hn = NULL;
 
         // Check all surrounding of the minimum on heap
