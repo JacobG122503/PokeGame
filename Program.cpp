@@ -1,8 +1,9 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.05
+Version: 1.06
 */
+#include <iostream>
 #include <limits.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -31,7 +32,8 @@ typedef enum {
     NPCTYPES
 } npc;
 
-typedef struct NPCs {
+typedef class NPCs {
+    public:
     int alive;
     int x;
     int y;
@@ -41,8 +43,9 @@ typedef struct NPCs {
     npc type;
 } NPCs;
 
-struct map {
-    char* map[ROWS][COLUMNS];
+class map {
+    public: //fortnite poo
+    std::string map[ROWS][COLUMNS];
     int hikerWeights[ROWS][COLUMNS];
     int othersWeights[ROWS][COLUMNS];
     NPCs npcs[MAXNPC];
@@ -65,7 +68,8 @@ typedef struct path {
   int cost;
 } path;
 
-typedef struct PlayerChar {
+typedef class PlayerChar {
+    public:
     int x;
     int y;
     int worldX;
@@ -79,33 +83,33 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC);
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY);
 void SpawnNPCs(int number, int worldX, int worldY);
 void PlacePC(int worldX, int worldY);
-struct map GenerateMap(int x, int y);
+class map GenerateMap(int x, int y);
 void PrintMap(int worldX, int worldY);
-char* FindTerrain();
+// void PrintExploredWorld();
+std::string FindTerrain();
 void DeleteWorld();
 static int32_t path_cmp(const void *key, const void *with);
 static int32_t npc_turn_cmp(const void *key, const void *with);
-static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY);
+static void Dijkstra(class map *map, npc npcType, int playerX, int playerY);
 
 //Elements and Characters
-char* MTN = "%";
-char* TREE = "^";
-char* ROAD = "#";
-char* LNGR = ":";
-char* CLRNG = ".";
-char* WATER = "~";
-char* CNTR = "C";
-char* PKMART = "M";
+std::string MTN = "%";
+std::string TREE = "^";
+std::string ROAD = "#";
+std::string LNGR = ":";
+std::string CLRNG = ".";
+std::string WATER = "~";
+std::string CNTR = "C";
+std::string PKMART = "M";
 
-// char* PC = "@";
-char* HIKER = "h";
-char* RIVAL = "r";
-char* PACER = "p";
-char* WANDERER = "w";
-char* SENTRY = "s";
-char* EXPLORER = "e";
+std::string HIKER = "h";
+std::string RIVAL = "r";
+std::string PACER = "p";
+std::string WANDERER = "w";
+std::string SENTRY = "s";
+std::string EXPLORER = "e";
 
-struct map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
+class map *worldMap[WORLDROWS][WORLDCOLUMNS]; 
 PlayerChar *Player;
 
 int main(int argc, char *argv[]) {
@@ -140,7 +144,7 @@ int main(int argc, char *argv[]) {
     fprintf(seedFile, "%ld\n", seed);
     fclose(seedFile);
 
-    Player = malloc(sizeof(PlayerChar));
+    Player = new PlayerChar;
 
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
@@ -150,7 +154,7 @@ int main(int argc, char *argv[]) {
 
     int x = 200;
     int y = 200;
-    char* statusMessage = "";
+    std::string statusMessage = "";
     GenerateMap(x, y);
     PlacePC(x, y);
     SpawnNPCs(numTrainers, x, y);
@@ -170,8 +174,7 @@ int main(int argc, char *argv[]) {
         Dijkstra(worldMap[x][y], rivalNPC, Player->x, Player->y);
 
         // Check if it is PCs turn
-        // Note: make sure later on to set turn time to 0 when entering a new map.
-        NPCs *nextNPC = heap_remove_min(&worldMap[x][y]->turns);
+        NPCs *nextNPC = (NPCs *) heap_remove_min(&worldMap[x][y]->turns);
         NPCs *battleNPC = NULL;
         int battleTime = 0;
 
@@ -187,15 +190,13 @@ int main(int argc, char *argv[]) {
                 heap_insert(&worldMap[x][y]->turns, nextNPC);
                 continue;
             }
-
-            
         }
         heap_insert(&worldMap[x][y]->turns, nextNPC);
 
         clear();
-        PrintMap(x, y);
+        PrintMap(x, y); 
         attron(COLOR_PAIR(COLOR_MAGENTA));
-        printw(statusMessage);
+        printw(statusMessage.c_str());
         attroff(COLOR_PAIR(COLOR_MAGENTA));
         refresh();
         statusMessage = "";
@@ -286,27 +287,77 @@ int main(int argc, char *argv[]) {
 
         // Run checks
         if (!(moveX == 0 && moveY == 0)) {
-            if (Player->x + moveX > 0 && Player->y + moveY > 0 && // Later on change this to not be mountain, so users can go to other maps
+            if (Player->x + moveX > 0 && Player->y + moveY > 0 &&
                 Player->x + moveX < ROWS - 1 && Player->y + moveY < COLUMNS - 1 &&
-                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], WATER) &&
-                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY], TREE)) {
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), WATER.c_str()) &&
+                strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), TREE.c_str())) {
 
                 // Add time to Player from last terrain weight and move
                 Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
                 Player->x += moveX;
                 Player->y += moveY;
+            } else if ((Player->x + moveX == 0 || Player->y + moveY == 0 ||
+                       Player->x + moveX == ROWS - 1 || Player->y + moveY == COLUMNS - 1) &&
+                       !strcmp(worldMap[x][y]->map[Player->x + moveX][Player->y + moveY].c_str(), ROAD.c_str())) {
+
+                // Player is going to next map
+                int newWorldX = 0;
+                int newWorldY = 0;
+                int newPCX, newPCY;
+                if (Player->y + moveY == worldMap[x][y]->northEnt && Player->x + moveX == 0) {
+                    //North
+                    newWorldY++;
+                    newPCX = ROWS - 2;
+                    newPCY = worldMap[x][y]->northEnt;
+                } else if (Player->y + moveY == worldMap[x][y]->southEnt && Player->x + moveX == ROWS - 1) {
+                    //South
+                    newWorldY--;
+                    newPCX = 1;
+                    newPCY = worldMap[x][y]->southEnt;
+                } else if (Player->y + moveY == 0 && Player->x + moveX == worldMap[x][y]->westEnt) {
+                    //West
+                    newWorldX--;
+                    newPCX = worldMap[x][y]->westEnt;
+                    newPCY = COLUMNS - 2;
+                } else if (Player->y + moveY == COLUMNS - 1 && Player->x + moveX == worldMap[x][y]->eastEnt) {
+                    //East
+                    newWorldX++;
+                    newPCX = worldMap[x][y]->eastEnt;
+                    newPCY = 1;
+                }
+
+                if (!(newWorldX == 0 && newWorldY == 0) && !(x + newWorldX > 400 || y + newWorldY > 400 || x + newWorldX < 0 || y + newWorldY < 0)) {
+                    x += newWorldX;
+                    y += newWorldY;
+
+                    Player->turnTime = 0;
+                    Player->x = newPCX;
+                    Player->y = newPCY;
+                    Player->worldX = x;
+                    Player->worldY = y;
+
+                    GenerateMap(x, y);
+                    if (!worldMap[x][y]->turns.initialized) {
+                        SpawnNPCs(numTrainers, x, y);
+                    } else {
+                        // Set all npcs turn time back to zero
+                        for (int i = 0; i < numTrainers; i++) {
+                            worldMap[x][y]->npcs[i].turnTime = 0;
+                        }
+                    }
+                }
             }
         }
 
-        //Rest for a turn
+        // Rest for a turn
         if (command == '5' || command == ' ' || command == '.') {
             Player->turnTime += worldMap[x][y]->othersWeights[Player->x][Player->y];
         }
 
         // Enter building
         if (command == '>') {
-            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y], CNTR) ||
-                !strcmp(worldMap[x][y]->map[Player->x][Player->y], PKMART)) {
+            if (!strcmp(worldMap[x][y]->map[Player->x][Player->y].c_str(), CNTR.c_str()) ||
+                !strcmp(worldMap[x][y]->map[Player->x][Player->y].c_str(), PKMART.c_str())) {
 
                 char building = ' ';
                 attron(COLOR_PAIR(COLOR_MAGENTA));
@@ -317,6 +368,67 @@ int main(int argc, char *argv[]) {
                     building = getch();
             }
         }
+
+        // Fly
+        if (command == 'f') {
+            clear();
+            attron(COLOR_PAIR(COLOR_MAGENTA));
+            printw("You are about to fly! Please type your two coordinates you would like to fly to or type q to cancel: \n");
+            refresh();
+            attroff(COLOR_PAIR(COLOR_MAGENTA));
+
+            echo();
+            char input[4];
+            getstr(input);
+            if (!strcmp(input, "q"))
+                continue;
+            char input2[4];
+            getstr(input2);
+            noecho();
+
+            int newX = atoi(input);
+            int newY = atoi(input2);
+            newX += 200;
+            newY += 200;
+
+            if (!(newX > 400 || newY > 400 || newX < 0 || newY < 0)) {
+                x = newX;
+                y = newY;
+                GenerateMap(x, y);
+
+                //Place PC on new map
+                int placed = 0;
+                while (placed == 0) {
+                    int row = rand() % (ROWS - 2) + 1;
+                    int col = rand() % (COLUMNS - 2) + 1;
+                    if (!strcmp(worldMap[x][y]->map[row][col].c_str(), ROAD.c_str())) {
+                        Player->x = row;
+                        Player->y = col;
+                        Player->turnTime = 0;
+                        Player->worldX = x;
+                        Player->worldY = y;
+
+                        placed = 1;
+                    }
+                }
+
+                if (!worldMap[x][y]->turns.initialized) {
+                    SpawnNPCs(numTrainers, x, y);
+                } else {
+                    // Set all npcs turn time back to zero
+                    for (int i = 0; i < numTrainers; i++) {
+                        worldMap[x][y]->npcs[i].turnTime = 0;
+                    }
+                }
+            } else {
+                statusMessage = "Error flying to coordinates. Please make sure they are in the world bounds.";
+            }
+        }
+
+        //Show World Exploration Map
+        // if (command == 'E') {
+        //     PrintExploredWorld();
+        // }
 
         // View trainer list
         if (command == 't') {
@@ -339,12 +451,12 @@ int main(int argc, char *argv[]) {
             mvprintw(4, (COLUMNS/2) - 6, "TRAINER INFO");
 
             //Set up trainer info string array
-            char *trainerInfo[numTrainers];
+            std::string trainerInfo[numTrainers];
             for (int i = 0; i < numTrainers; i++) {
                 NPCs currNPC = worldMap[x][y]->npcs[i];
 
                 // Get name of npc
-                char *name;
+                std::string name;
                 switch (currNPC.type) {
                 case hikerNPC:
                     name = "Hiker";
@@ -370,29 +482,25 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (!currNPC.alive) {
-                    asprintf(&trainerInfo[i], "%s - (dead)", name);
+                    trainerInfo[i] = name + " - (dead)";
                     continue;
                 }
 
-                // Get both directions
-                char *xStr, *yStr;
+                std::string xStr, yStr;
                 int xDist = Player->x - currNPC.x;
                 int yDist = Player->y - currNPC.y;
                 if (xDist < 0) {
-                    asprintf(&xStr, "South %d squares", abs(xDist));
+                    xStr = "South " + std::to_string(abs(xDist)) + " squares";
                 } else {
-                    asprintf(&xStr, "North %d squares", xDist);
+                    xStr = "North " + std::to_string(xDist) + " squares";
                 }
                 if (yDist < 0) {
-                    asprintf(&yStr, "East %d squares", abs(yDist));
+                    yStr = "East " + std::to_string(abs(yDist)) + " squares";
                 } else {
-                    asprintf(&yStr, "West %d squares", yDist);
+                    yStr = "West " + std::to_string(yDist) + " squares";
                 }
 
-                asprintf(&trainerInfo[i], "%s - Location: %s, %s", name, xStr, yStr);
-
-                free(xStr);
-                free(yStr);
+                trainerInfo[i] = name + " - Location: " + xStr + ", " + yStr;
             }
 
             // Print all trainers
@@ -410,7 +518,7 @@ int main(int argc, char *argv[]) {
 
                 // Print trainers
                 for (i = 0 + scroll, s = 0; i < numTrainers && (6 + s) < ROWS - 4; i++, s += 2) {
-                    mvprintw(6 + s, 5, "%s", trainerInfo[i]);
+                    mvprintw(6 + s, 5, "%s", trainerInfo[i].c_str());
                 }
                 refresh();
                 intCommand = getch();
@@ -425,62 +533,8 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            // Free list
-            for (i = 0; i < numTrainers; i++) {
-                free(trainerInfo[i]);
-            }
-
             attroff(COLOR_PAIR(COLOR_MAGENTA) | A_BOLD);
         }
-
-        //Old movement logic
-        //Instructions
-        // if (command == 'i') {
-        //     printw("%sCOMMAND LIST%s\n","green", "reset");
-        //     printw("n: Move to the map immediately north of the current map and display it.\n"
-        //         "s: Move to the map immediately south of the current map and display it.\n"
-        //         "e: Move to the map immediately east of the current map and display it.\n"
-        //         "w: Move to the map immediately west of the current map and display it.\n"
-        //         "f x y: x and y are integers; Fly to map (x, y) and display it.\n"
-        //         "q: Quit the game.\n");
-        //     printw("\nType c to continue: ");
-        //     refresh();
-        //     while (command != 'c') command = getchar();
-        //     continue;
-        // }
-
-        // if (command == 'n' || command == 'e' || command == 's' || command == 'w') {
-        //     if (command == 'n' && !(x > 400 || y + 1 > 400 || x < 0 || y < 0)) y++;
-        //     if (command == 'e' && !(x + 1 > 400 || y > 400 || x < 0 || y < 0)) x++;
-        //     if (command == 's' && !(x > 400 || y > 400 || x < 0 || y - 1 < 0)) y--;
-        //     if (command == 'w' && !(x > 400 || y > 400 || x - 1 < 0 || y < 0)) x--;
-
-        //     GenerateMap(x, y);
-        //     continue;
-        // }
-        // if (command == 'f') {
-        //     int oldX = x;
-        //     int oldY = y;
-        //     scanf(" %d %d", &x, &y);
-        //     x += 200;
-        //     y += 200;
-        //     if (x > 400 || y > 400 || x < 0 || y < 0) {
-        //         x = oldX;
-        //         y = oldY;
-        //         continue;
-        //     }
-        //     GenerateMap(x, y);
-        // }
-        // if (command == 'm') {
-        //     while (1) {
-        //         NextTurn(x, y);
-        //         PrintMap(x, y);
-        //         refresh();
-        //         usleep(40000);
-        //         clear();
-        //     }
-        //     continue;
-        // }
     }
 
     printw("Closing game...\n");
@@ -506,7 +560,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
     if (currNPC->type == hikerNPC || currNPC->type == rivalNPC) {
         int nextX = currNPC->x;
         int nextY = currNPC->y;
-        struct map currMap = *worldMap[worldX][worldY];
+        map currMap = *worldMap[worldX][worldY];
 
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
@@ -546,10 +600,10 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
         // If can continue walking, continue
         // Else, go back
-        if (strcmp(nextTer, TREE) && strcmp(nextTer, WATER) && strcmp(nextTer, MTN)
+        if (strcmp(nextTer.c_str(), TREE.c_str()) && strcmp(nextTer.c_str(), WATER.c_str()) && strcmp(nextTer.c_str(), MTN.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -562,7 +616,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
     } 
     else if (currNPC->type == wandererNPC) {
         //Wanderes never leave their terrain
-        char *currTer = worldMap[worldX][worldY]->map[currNPC->x][currNPC->y];
+        std::string currTer = worldMap[worldX][worldY]->map[currNPC->x][currNPC->y];
         //Find direction
         while (currNPC->dirX == 0 && currNPC->dirY == 0) {
             currNPC->dirX = (int)(((double)rand() / RAND_MAX) * 3) - 1;
@@ -571,8 +625,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (!strcmp(currTer, nextTer)
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (!strcmp(currTer.c_str(), nextTer.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -592,8 +646,8 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 
         int nextX = currNPC->x + currNPC->dirX;
         int nextY = currNPC->y + currNPC->dirY;
-        char *nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
-        if (strcmp(nextTer, WATER) && strcmp(nextTer, MTN) && strcmp(nextTer, TREE)
+        std::string nextTer = worldMap[worldX][worldY]->map[nextX][nextY];
+        if (strcmp(nextTer.c_str(), WATER.c_str()) && strcmp(nextTer.c_str(), MTN.c_str()) && strcmp(nextTer.c_str(), TREE.c_str())
             && MoveNPC_CheckValid(worldX, worldY, nextX, nextY)) {
             currNPC->x = nextX;
             currNPC->y = nextY;
@@ -610,7 +664,7 @@ void MoveNPC(int worldX, int worldY, NPCs *currNPC) {
 }
 
 int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
-    struct map currMap = *worldMap[worldX][worldY];
+    class map currMap = *worldMap[worldX][worldY];
 
     // Check if next spot is gate
     if ((nextX == 0 && nextY == currMap.northEnt) ||
@@ -633,9 +687,10 @@ int MoveNPC_CheckValid(int worldX, int worldY, int nextX, int nextY) {
 }
 
 void SpawnNPCs(int number, int worldX, int worldY) {
-    struct map *currentMap = worldMap[worldX][worldY];
+    class map *currentMap = worldMap[worldX][worldY];
 
     heap_init(&currentMap->turns, npc_turn_cmp, NULL);
+    currentMap->turns.initialized = 1;
 
     currentMap->nmbOfNPCs = number;
     npc npcList[number];
@@ -651,7 +706,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         }
         
         int nextNpc = rand() % NPCTYPES;
-        npcList[i] = nextNpc;
+        npcList[i] = (npc) nextNpc;
     }
 
     //Initialize all the npcs
@@ -665,7 +720,7 @@ void SpawnNPCs(int number, int worldX, int worldY) {
         currNPC.turnTime = 0;
         currNPC.alive = 1;
 
-        if (!strcmp(currentMap->map[currNPC.x][currNPC.y], WATER) || !strcmp(currentMap->map[currNPC.x][currNPC.y], TREE)) {
+        if (!strcmp(currentMap->map[currNPC.x][currNPC.y].c_str(), WATER.c_str()) || !strcmp(currentMap->map[currNPC.x][currNPC.y].c_str(), TREE.c_str())) {
             i--;
             continue;
         }
@@ -678,14 +733,14 @@ void SpawnNPCs(int number, int worldX, int worldY) {
 }
 
 void PlacePC(int worldX, int worldY) {
-    struct map *map = worldMap[worldX][worldY];
+    class map *map = worldMap[worldX][worldY];
     int placed = 0;
 
     while (placed == 0) {
         int row = rand() % (ROWS - 2) + 1;
         int col = rand() % (COLUMNS - 2) + 1;
 
-        if (!strcmp(map->map[row][col], ROAD)) {
+        if (!strcmp(map->map[row][col].c_str(), ROAD.c_str())) {
             Player->x = row;
             Player->y = col;
             Player->worldX = worldX;
@@ -696,11 +751,11 @@ void PlacePC(int worldX, int worldY) {
     }
 }
 
-struct map GenerateMap(int x, int y) {
+class map GenerateMap(int x, int y) {
     //Check if map already exists
     if (worldMap[x][y] != NULL) return *worldMap[x][y];
 
-    char* map[ROWS][COLUMNS];
+    std::string map[ROWS][COLUMNS];
 
     //Fill with blank space
     for (int i = 0; i < ROWS; i++) {
@@ -736,12 +791,12 @@ struct map GenerateMap(int x, int y) {
         int y = rand() % (COLUMNS - 2) + 1;
 
         //Place terrain
-        char* terrain = FindTerrain();
+        std::string terrain = FindTerrain();
         for (int i = x; i < x + newXLength; i++) {
             for (int j = y; j < y + newYLength; j++) {
                 //Check if on border
                 if ((i > 0) && (i < ROWS - 1) && (j > 0) && (j < COLUMNS - 1)) {
-                    if (strcmp(map[i][j], " ") == 0) blankSpace--;
+                    if (strcmp(map[i][j].c_str(), " ") == 0) blankSpace--;
                     map[i][j] = terrain;
                 }
             }
@@ -821,7 +876,7 @@ struct map GenerateMap(int x, int y) {
     //Place PokeMart and PokeCenter 
     int buidlingsPlaced = 0;
     int buildingsToBePlaced = 2;
-    char* building;
+    std::string building;
     int randBuilding = rand() % 2 + 1;
     if (randBuilding == 1) building = CNTR;
     if (randBuilding == 2) building = PKMART;
@@ -856,15 +911,15 @@ struct map GenerateMap(int x, int y) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
                 int spotRow = rand() % (ROWS - 3) + 3;
                 //Check conditions
-                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
-                if (strcmp(map[spotRow - 1][spotCol], CNTR) == 0 ||
-                    strcmp(map[spotRow - 2][spotCol], CNTR) == 0 || 
-                    strcmp(map[spotRow - 1][spotCol + 1], CNTR) == 0 ||
-                    strcmp(map[spotRow - 2][spotCol + 1], CNTR) == 0) continue;
-                if (strcmp(map[spotRow - 1][spotCol], ROAD) != 0 &&
-                    strcmp(map[spotRow - 2][spotCol], ROAD) != 0 && 
-                    strcmp(map[spotRow - 1][spotCol + 1], ROAD) != 0 &&
-                    strcmp(map[spotRow - 2][spotCol + 1], ROAD) != 0) {
+                if (strcmp(map[spotRow][spotCol].c_str(), ROAD.c_str()) != 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol].c_str(), CNTR.c_str()) == 0 || 
+                    strcmp(map[spotRow - 1][spotCol + 1].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow - 2][spotCol + 1].c_str(), CNTR.c_str()) == 0) continue;
+                if (strcmp(map[spotRow - 1][spotCol].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol].c_str(), ROAD.c_str()) != 0 && 
+                    strcmp(map[spotRow - 1][spotCol + 1].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow - 2][spotCol + 1].c_str(), ROAD.c_str()) != 0) {
                         map[spotRow - 1][spotCol] = building;
                         map[spotRow - 2][spotCol] = building;
                         map[spotRow - 1][spotCol + 1] = building;
@@ -877,15 +932,15 @@ struct map GenerateMap(int x, int y) {
                 int spotCol = rand() % (COLUMNS - 3) + 1;
                 int spotRow = rand() % (ROWS - 6) + 3;
                 //Check conditions
-                if (strcmp(map[spotRow][spotCol], ROAD) != 0) continue;
-                if (strcmp(map[spotRow + 1][spotCol], CNTR) == 0 ||
-                    strcmp(map[spotRow + 2][spotCol], CNTR) == 0 || 
-                    strcmp(map[spotRow + 1][spotCol + 1], CNTR) == 0 ||
-                    strcmp(map[spotRow + 2][spotCol + 1], CNTR) == 0) continue;
-                if (strcmp(map[spotRow + 1][spotCol], ROAD) != 0 &&
-                    strcmp(map[spotRow + 2][spotCol], ROAD) != 0 && 
-                    strcmp(map[spotRow + 1][spotCol + 1], ROAD) != 0 &&
-                    strcmp(map[spotRow + 2][spotCol + 1], ROAD) != 0) {
+                if (strcmp(map[spotRow][spotCol].c_str(), ROAD.c_str()) != 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol].c_str(), CNTR.c_str()) == 0 || 
+                    strcmp(map[spotRow + 1][spotCol + 1].c_str(), CNTR.c_str()) == 0 ||
+                    strcmp(map[spotRow + 2][spotCol + 1].c_str(), CNTR.c_str()) == 0) continue;
+                if (strcmp(map[spotRow + 1][spotCol].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol].c_str(), ROAD.c_str()) != 0 && 
+                    strcmp(map[spotRow + 1][spotCol + 1].c_str(), ROAD.c_str()) != 0 &&
+                    strcmp(map[spotRow + 2][spotCol + 1].c_str(), ROAD.c_str()) != 0) {
                         map[spotRow + 1][spotCol] = building;
                         map[spotRow + 2][spotCol] = building;
                         map[spotRow + 1][spotCol + 1] = building;
@@ -904,7 +959,7 @@ struct map GenerateMap(int x, int y) {
     }
 
     //Copy map over to World Map
-    struct map newMap;
+    class map newMap;
 
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
@@ -918,18 +973,19 @@ struct map GenerateMap(int x, int y) {
     newMap.westEnt = westEnt;
     newMap.eastEnt = eastEnt;
     newMap.nmbOfNPCs = 0;
+    newMap.turns.initialized = 0;
 
     // Initialize terrain weights
     // Hiker weights
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            char *terrain = newMap.map[i][j];
+            std::string terrain = newMap.map[i][j];
 
-            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+            if (!strcmp(terrain.c_str(), CLRNG.c_str()) || !strcmp(terrain.c_str(), ROAD.c_str())) {
                 newMap.hikerWeights[i][j] = 10;
-            } else if (!strcmp(terrain, LNGR) || !strcmp(terrain, TREE)) {
+            } else if (!strcmp(terrain.c_str(), LNGR.c_str()) || !strcmp(terrain.c_str(), TREE.c_str())) {
                 newMap.hikerWeights[i][j] = 15;
-            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+            } else if (!strcmp(terrain.c_str(), PKMART.c_str()) || !strcmp(terrain.c_str(), CNTR.c_str())) {
                 newMap.hikerWeights[i][j] = 50;
             } else {
                 newMap.hikerWeights[i][j] = SHRT_MAX;
@@ -939,13 +995,13 @@ struct map GenerateMap(int x, int y) {
     //Rival and Other weights
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLUMNS; j++) {
-            char *terrain = newMap.map[i][j];
+            std::string terrain = newMap.map[i][j];
 
-            if (!strcmp(terrain, CLRNG) || !strcmp(terrain, ROAD)) {
+            if (!strcmp(terrain.c_str(), CLRNG.c_str()) || !strcmp(terrain.c_str(), ROAD.c_str())) {
                 newMap.othersWeights[i][j] = 10;
-            } else if (!strcmp(terrain, LNGR)) {
+            } else if (!strcmp(terrain.c_str(), LNGR.c_str())) {
                 newMap.othersWeights[i][j] = 20;
-            } else if (!strcmp(terrain, PKMART) || !strcmp(terrain, CNTR)) {
+            } else if (!strcmp(terrain.c_str(), PKMART.c_str()) || !strcmp(terrain.c_str(), CNTR.c_str())) {
                 newMap.othersWeights[i][j] = 50;
             } else {
                 newMap.othersWeights[i][j] = SHRT_MAX;
@@ -953,23 +1009,23 @@ struct map GenerateMap(int x, int y) {
         }
     }
 
-    worldMap[x][y] = malloc(sizeof(struct map));
+    worldMap[x][y] = new class map;
     if (worldMap[x][y] != NULL) {
-        memcpy(worldMap[x][y], &newMap, sizeof(struct map));
+        *worldMap[x][y] = newMap;
     }
 
     return newMap;
 }
 
 void PrintMap(int worldX, int worldY) {
-    struct map currMap = *worldMap[worldX][worldY];
+    class map currMap = *worldMap[worldX][worldY];
 
     //Place NPCs / PC
     if (worldX == Player->worldX && worldY == Player->worldY) {
         currMap.map[Player->x][Player->y] = "@";
     }
     for (int i = 0; i < currMap.nmbOfNPCs; i++) {
-        char *nextNPC;
+        std::string nextNPC;
         NPCs currNPC = currMap.npcs[i];
         if (!currNPC.alive) continue;
 
@@ -1007,32 +1063,32 @@ void PrintMap(int worldX, int worldY) {
             //Find color to switch to
             int color = -1;
             int bold = 0;
-            if (!strcmp(currMap.map[i][j], TREE) || !strcmp(currMap.map[i][j], MTN)) {
+            if (!strcmp(currMap.map[i][j].c_str(), TREE.c_str()) || !strcmp(currMap.map[i][j].c_str(), MTN.c_str())) {
                 color = COLOR_WHITE;
-            } else if (!strcmp(currMap.map[i][j], ROAD)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), ROAD.c_str())) {
                 color = COLOR_YELLOW;
-            } else if (!strcmp(currMap.map[i][j], LNGR) || !strcmp(currMap.map[i][j], CLRNG)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), LNGR.c_str()) || !strcmp(currMap.map[i][j].c_str(), CLRNG.c_str())) {
                 color = COLOR_GREEN;
-            } else if (!strcmp(currMap.map[i][j], WATER)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), WATER.c_str())) {
                 color = COLOR_CYAN;
-            } else if (!strcmp(currMap.map[i][j], CNTR) || !strcmp(currMap.map[i][j], PKMART)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), CNTR.c_str()) || !strcmp(currMap.map[i][j].c_str(), PKMART.c_str())) {
                 color = COLOR_MAGENTA;
-            } else if (!strcmp(currMap.map[i][j], "@")) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), "@")) {
                 color = COLOR_WHITE;
                 bold = 1;
-            } else if (!strcmp(currMap.map[i][j], HIKER) || 
-            !strcmp(currMap.map[i][j], RIVAL) || 
-            !strcmp(currMap.map[i][j], PACER) || 
-            !strcmp(currMap.map[i][j], WANDERER) || 
-            !strcmp(currMap.map[i][j], SENTRY) || 
-            !strcmp(currMap.map[i][j], EXPLORER)) {
+            } else if (!strcmp(currMap.map[i][j].c_str(), HIKER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), RIVAL.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), PACER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), WANDERER.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), SENTRY.c_str()) || 
+            !strcmp(currMap.map[i][j].c_str(), EXPLORER.c_str())) {
                 color = COLOR_RED;
                 bold = 1;
             }
 
             if (bold) attron(A_BOLD);
             attron(COLOR_PAIR(color));
-            printw("%s", currMap.map[i][j]);
+            printw("%s", currMap.map[i][j].c_str());
             attroff(COLOR_PAIR(color));
             if (bold) attroff(A_BOLD);
         }
@@ -1041,7 +1097,28 @@ void PrintMap(int worldX, int worldY) {
     printw("(%d, %d)\n", currMap.x - 200, currMap.y - 200);
 }
 
-char* FindTerrain() {
+// void PrintExploredWorld() {
+//     clear();
+
+//     int adjust_i = 0;
+//     int adjust_j = 0;
+//     for (int i = 0; i < ROWS + adjust_i; i++) {
+//         for (int j = 0; j < COLUMNS + adjust_j; j++) {
+//             if (worldMap[i][j]) {
+//                 printw("X");
+//             } else {
+//                 printw(" ");
+//             }
+//         }
+//     }
+//     refresh();
+
+//     int command = getch();
+//     if (command == 'q') return;
+// }
+
+
+std::string FindTerrain() {
     int ter = rand() % 4 + 1;
 
     if (ter == 1) {
@@ -1058,7 +1135,7 @@ char* FindTerrain() {
 }
 
 void DeleteWorld() {
-    free(Player);
+    delete Player;
     for (int i = 0; i < WORLDROWS; i++) {
         for (int j = 0; j < WORLDCOLUMNS; j++) {
             free(worldMap[i][j]);
@@ -1075,7 +1152,7 @@ static int32_t npc_turn_cmp(const void *key, const void *with) {
   return ((NPCs *) key)->turnTime - ((NPCs *) with)->turnTime;
 }
 
-static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
+static void Dijkstra(class map *map, npc npcType, int playerX, int playerY){
     path npcPath[ROWS][COLUMNS], *npcP;
     heap_t h;
 
@@ -1117,7 +1194,7 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
         }
     }
 
-    while ((npcP = heap_remove_min(&h))){
+    while ((npcP = (path *) heap_remove_min(&h))){
         npcP->hn = NULL;
 
         // Check all surrounding of the minimum on heap
@@ -1151,22 +1228,5 @@ static void Dijkstra(struct map *map, npc npcType, int playerX, int playerY){
                 map->rivalMap[i][j] = npcPath[i][j].cost;
             }
         }
-    }
-
-    //Print costs. NOTE: REMOVE AFTER ASSIGNMENT 1.03
-    // for (int i = 0; i < ROWS; i++){
-    //     for (int j = 0; j < COLUMNS; j++){
-    //         if(npcPath[i][j].cost == SHRT_MAX){
-    //             printw("   ");
-    //             continue;
-    //         }
-    //         if (i == playerX && j == playerY) {
-    //             printw("%s%2d%s ",, npcPath[i][j].cost % 100,);
-    //             continue;
-    //         }
-    //         printw("%2d ", npcPath[i][j].cost % 100);
-    //     }
-    //     printw("\n");
-    // }
-    
+    } 
 }

@@ -15,6 +15,7 @@ typedef struct heap {
   uint32_t size;
   int32_t (*compare)(const void *key, const void *with);
   void (*datum_delete)(void *);
+  int initialized;
 } heap_t;
 
 void heap_init(heap_t *h,

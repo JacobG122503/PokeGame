@@ -1,5 +1,5 @@
 # PokeGame 327
-## Version 1.05
+## Version 1.06
 ### Creator: Jacob Garcia
 
 PokeGame 327 is a game currently under development for ISU class COM S 327. It is a Pokemon-style game, and it is expected to be finished by May when the class concludes. Please see below sections for information about the game.
@@ -45,6 +45,7 @@ Interactions:
 - ">" : Attempt to enter a Pokemart or Pokemon Center. Works only if standing on a building.
 - "<" : Attempt to exit a Pokemart or Pokemon Center. 
 - 5 or space or . : Rest for a turn. NPCs still move.
+- f: Fly to any map in the world. 
 
 Display Options:
 - t: Display a list of trainers on the map, with their symbol and position relative to the PC (e.g., "r, 2 north and 14 west").
@@ -65,7 +66,7 @@ To run the game:
 
 ### Known Bugs
 
-There are a few bugs I have discovered with my program that should be known just incase. The two seeds will show you the bugs. The first one
+There are a few bugs I have discovered with my program that should be known just in case. The two seeds will show you the bugs. The first one
 has an endless loop when trying to generate the first map. Second one has two buildings overlap eachother. Out of the probably thousand 
 of times I have ran my program, I have NEVER had these issues again but I wanted to put them here just incase they show up.
 
@@ -73,6 +74,11 @@ of times I have ran my program, I have NEVER had these issues again but I wanted
 - 1708632100 - Buildings overlap
 
 ### Updates
+
+**1.06 (3/22/24)**
+- Ported entire program to C++
+- Moving from map to map in the world functionality added back
+- Fly ability re-added back too
 
 **1.05 (3/7/24)**
 - Added user interface with ncurses
