@@ -1011,7 +1011,7 @@ class map GenerateMap(int x, int y) {
 
     worldMap[x][y] = new class map;
     if (worldMap[x][y] != NULL) {
-        memcpy(worldMap[x][y], &newMap, sizeof(class map));
+        *worldMap[x][y] = newMap;
     }
 
     return newMap;
