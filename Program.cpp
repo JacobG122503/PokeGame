@@ -1,7 +1,7 @@
 /*
 PROGRAM INFO
 Author: Jacob Garcia
-Version: 1.06
+Version: 1.07
 */
 #include <iostream>
 #include <limits.h>
